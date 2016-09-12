@@ -62,7 +62,7 @@ def setSlaveMode(opt, cb=None):
     Sets pdb2ins script to SlaveMode thereby using an dictionary object created by cmd.CommanineParser.__call__()
     instead of using sys.argv to build the dictionary itself and intercepting all output to sys.stdout and rerouting
     it to the callback object 'cb'
-    :param opt: Dictionary type defining all options as output by cmd.CommanineParser.__call__().
+    :param opt: Dictionary type defining all options as output by cmd.CommandlineParser.__call__().
     :param cb: Callable that gets called with the string arguments that are usually written to sys.stdout.
     :return: None
     """
@@ -74,6 +74,12 @@ def setSlaveMode(opt, cb=None):
 
 
 def raw_input(*args, **kwargs):
+    """
+    Enables the user to terminate the program by typing either 'q' or 'exit' during raw_input.
+    :param args:
+    :param kwargs:
+    :return:
+    """
     inputString = buildin_raw_Input(*args, **kwargs)
     if inputString.lower() == 'q' or inputString.lower() == 'exit':
         print '*** PDB2INS has been terminated ***'
@@ -112,7 +118,9 @@ class Data(object):
 
     def askHKL(self):
         """
-
+        The first question the user is asked after starting pdb2ins. (pdb2ins will need the format of the hkl file
+        therefore it is necessary to run pdb2hkl subroutine first.)
+        'yes' will lead down the pdb2hkl path. Default answer is 'no'
         :return:
         """
         if not options['i'] and not options['b']:
@@ -125,12 +133,14 @@ class Data(object):
                     break
                 if doHKL == 'N' or doHKL == 'n':
                     break
-            if options['b'] and not options['filename']:
+            if options['b'] and not options['filename']:  # check if indentation correct!
                 self.askHKLfilename()
 
     def askHKLfilename(self):
         """
-
+        Choose a file or enter a pdbcode prefixed with '@'. The prefix will signal the program to download the -sf.cif
+        file from the RCSB PDB.
+        When the file should be downloaded, the function checks if the file is already available locally.
         :return:
         """
         while True:
@@ -157,6 +167,16 @@ class Data(object):
         options['d'] = self.hklfile
 
     def makeHKLfile(self):
+        """
+        options 'b':tells us a hkl file should be created.
+        options 'd': a input file in .cif format containing structure factors is given to create an .hkl
+        options 'o': an output filename for the .ins file is specified and will be used for the .hkl file also.
+        options 'filename': if starting with an '@', this code is used to download the *-sf.cif file from the RCSB PDB.
+        This function tries to generate a input and output filename for the structure factor files.
+        Those and other information is given as optionsForPdb2hkl to the subroutine pdb2hkl.
+        The subroutine pdb2hkl is started.
+        :return:
+        """
         if options['b']:
             if options['d']:
                 filename = options['d']
@@ -480,7 +500,8 @@ class IO(object):
 
     def askPDBredo(self):
         """
-
+        User is promted whether the RCSB or PDB-REDO server should be used to download the .pdb file. Options are
+        enumerated 1 and 2.
         :return:
         """
         # if not self.options['GUI']:
@@ -802,7 +823,7 @@ class Header(object):
 
     def askHklf(self):
         """
-        Sets the HKLF code. Default value is 4
+        Sets the HKLF code. Default value is 4.
         :return:
         """
         # print options['i'], options['h']
@@ -1327,6 +1348,8 @@ class AtomContainer(object):
         water residues later on and here for not bound residues listed in HET record.
         Important: An error should occur if the chain is neither! Now the chain just starts again with resi#2!!!
         [The former part only applies to the old shelxl version]
+        * MAJOR CHANGES added with revision 173, now insertion Codes are handled differently. Still some issues with
+        hole chains with insertion codes!
         :param line: one line with atom data from pdb file.
         :return: dictionary entry with atom name as key and the corresponding atoms line from the pdb file as value.
         """
