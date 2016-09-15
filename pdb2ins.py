@@ -2303,7 +2303,7 @@ class Atom(object):
         Extracts the residue sequence number from the atom's pdb line.
         :return: residue sequence number as string.
         """
-        self.resiSeqNum = self.line[23:26]
+        self.resiSeqNum = self.line[22:26]
 
     def setResiSeqNum(self, newNum):
         self.resiSeqNum = newNum
