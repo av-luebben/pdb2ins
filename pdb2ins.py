@@ -3,7 +3,7 @@ __author__ = 'anna'
 first project pdb2ins
 by Anna Vera Luebben
 start February 2015
-version 2015/2 from August
+version 2016/2 (October)
 
 Read pdb file and generate .ins file for SHELXL.
 The pdb file is assumed to conform to the Protein Data Bank notes
@@ -125,7 +125,8 @@ class Data(object):
         """
         if not options['i'] and not options['b']:
             while True:
-                doHKL = raw_input('Create .hkl file from structure factor file (cif format) or PDB code? (y or n) [N]: ')
+                doHKL = raw_input('\nCreate .hkl file from structure factor file (cif format) or PDB code? (y or n) '
+                                  '[N]: ')
                 if not doHKL:
                     break
                 if doHKL == 'Y' or doHKL == 'y':
@@ -144,7 +145,7 @@ class Data(object):
         :return:
         """
         while True:
-                self.hklfile = raw_input("Enter name of structure factor file to read (To download a PDB "
+                self.hklfile = raw_input("\nEnter name of structure factor file to read (To download a PDB "
                                           "file enter \'@<PDBCODE>\'): ")#.upper()
                 if not os.path.isfile(self.hklfile) and not self.hklfile.startswith('@'):
                     newstring = str(self.hklfile[:-4].upper())+str(self.hklfile[-4:])
@@ -303,7 +304,7 @@ class Data(object):
                     self.header.interpretLine(line)
         except TypeError:
             # print line
-            print 'ERROR: File is not a PDB file.\n *** PDB2INS is terminated without writing an .ins file. ***'
+            print '\nERROR: File is not a PDB file.\n *** PDB2INS is terminated without writing an .ins file. ***'
             exit()
 
     def dealWithHAtoms(self):
@@ -329,7 +330,7 @@ class Data(object):
         trouble with HFIX in shelxl.
         :return:
         """
-        print ('\n INFO: This pdb file contains Hydrogen atoms from X-ray diffraction data. \n'
+        print ('\nINFO: This pdb file contains Hydrogen atoms from X-ray diffraction data. \n'
                'It is recommended to delete all Hydrogen atoms now and use HFIX in shelxl \n'
                'to place them again. This program automatically creates the necessary \n'
                'HFIX instructions for natural amino acids.')
@@ -359,14 +360,14 @@ class Data(object):
         if 'NEUTRON' in line:
             self.neutronData = True
             self.atomContainer.neut = True
-            print '\n INFO: This file contains NEUTRON diffraction data. ' \
+            print '\nINFO: This file contains NEUTRON diffraction data. ' \
                   'The .ins file will now contain the NEUT instruction.\n' \
                   'Please be aware that the restraints for ligands may not be suitable for neutron data.'
         if 'X-RAY DIFFRACTION' not in line and 'NEUTRON' not in line:
             print 'This pdb file contains the following experimental data:'
             line1 = line[6:]
             print line1
-            reply = raw_input('This pdb file might not contain X-RAY diffraction data.\n'
+            reply = raw_input('\nThis pdb file might not contain X-RAY diffraction data.\n'
                               'Important information necessary to create an .ins file might be missing.\n'
                               'Missing data can cause the program to terminate inadvertently.\n'
                               'Continue anyway? (y or n) [N]: ')
@@ -388,7 +389,7 @@ class Data(object):
             return options['a']
         else:
             if not options['i']:
-                reply = raw_input('The pdb file contains anisotropic atom data. Convert anisotropic atoms to isotropic? '
+                reply = raw_input('\nThe pdb file contains anisotropic atom data. Convert anisotropic atoms to isotropic? '
                                   '(y or n) [Y]: ')
                 if reply == 'Y' or reply == 'y':
                     useAnisou = True
@@ -418,7 +419,7 @@ class Data(object):
         :return:
         """
         if not options['i']:
-            reply = raw_input("Reset water occupancy to unity? (y/n) [Y]: ")
+            reply = raw_input("\nReset water occupancy to unity? (y/n) [Y]: ")
             if not reply:
                 resetOccupancy = True
             if reply == 'y' or reply == 'Y':
@@ -552,7 +553,7 @@ class IO(object):
         if not self.workfile:  # in interactive mode without cmd options, the user is asked for the filename
             if not options['d']:
                 while True:
-                    self.workfile = raw_input("Enter name of PDB file to read (To download a PDB "
+                    self.workfile = raw_input("\nEnter name of PDB file to read (To download a PDB "
                                               "file enter \'@<PDBCODE>\'): ")#.upper()
                     if not os.path.isfile(self.workfile) and not self.workfile.startswith('@'):
                         newstring = str(self.workfile[:-4].upper())+str(self.workfile[-4:])
@@ -579,7 +580,7 @@ class IO(object):
                 else:
                     possiblePdbFilename = ''.join(str(hklfilename).split('.')[:-1]) + '.pdb'
                 while True:
-                    self.workfile = raw_input("Enter name of PDB file to read (To download a PDB "
+                    self.workfile = raw_input("\nEnter name of PDB file to read (To download a PDB "
                                               "file enter \'@<PDBCODE>\')[{}]: ".format(possiblePdbFilename))  #.upper()
                     if not self.workfile:
                         self.workfile = possiblePdbFilename
@@ -639,7 +640,7 @@ class IO(object):
         """
         defaultName = os.path.splitext(self.workfile)[0] + '.ins'
         if not self.options['i']:
-            self.outputFilename = raw_input("Enter .ins filename to be created [{}]: ".format(defaultName))
+            self.outputFilename = raw_input("\nEnter .ins filename to be created [{}]: ".format(defaultName))
             if not self.outputFilename:
                 self.outputFilename = defaultName
             elif not self.outputFilename.endswith('.ins'):
@@ -831,7 +832,7 @@ class Header(object):
         #     self.hklf = Data.getHKLF()
         if not self.hklf:
             if not options['i'] and not options['h']:
-                reply = raw_input('Enter HKLF code (3 for F, 4 for F-squared) [4]:')
+                reply = raw_input('\nEnter HKLF code (3 for F, 4 for F-squared) [4]:')
                 if not reply:
                     self.hklf = '4'
                 elif reply == '4' or reply == '3':
@@ -917,7 +918,7 @@ class Header(object):
         """
         doNotReplace1 = ['P 1', 'A 1', 'B 1', 'C 1', 'I 1', 'F 1']
         while True:
-            self.spaceGroup = raw_input("Space group not found or incorrect in .pdb file. Space group given: {} \n"
+            self.spaceGroup = raw_input("\nSpace group not found or incorrect in .pdb file. Space group given: {} \n"
                                         "Please enter the correct space group:".format(self.getSpaceGroup()))
             # print self.spaceGroup.strip(), type(self.spaceGroup)
             if self.spaceGroup.strip() not in doNotReplace1:
@@ -992,7 +993,7 @@ class Header(object):
             try:
                 self.zValue = int(self.crystLine[66:70])
             except KeyError:
-                self.zValue = raw_input("Please enter Z (number of molecules per cell):")
+                self.zValue = raw_input("\nPlease enter Z (number of molecules per cell):")
                 if not self.zValue:
                     print ' *** Error: No valid Z value given. *** '
                     self.zValue = None
@@ -1066,7 +1067,7 @@ class Header(object):
             # else:
             #     # this is the end of the change for the automated pdb main. Please remove after main!
             try:
-                reply = raw_input("No wavelength found in file. Enter wavelength in Angstroms [1.54178]: ")
+                reply = raw_input("\nNo wavelength found in file. Enter wavelength in Angstroms [1.54178]: ")
                 if not reply:
                     self.wavelength = 1.54178
                     # print "Wavelength set to default value 1.54178 Angstroms."
@@ -1374,8 +1375,9 @@ class AtomContainer(object):
             except KeyError:
                 # print resiName
                 while True:
-                    resiNameNew = raw_input('WARNING: The residue {} has a name SHELXL cannot handle!\n'
-                                            'Please enter a new 3 digit residue name starting with a letter: '.format(resiName))
+                    resiNameNew = raw_input('\nWARNING: The residue {} has a name SHELXL cannot handle!\n'
+                                            'Please enter a new 3 digit residue name starting '
+                                            'with a letter: '.format(resiName))
                     if len(resiName) <= 3:
                         print 'INFO: Residue {} successfully renamed to {}.'.format(resiName, resiNameNew)
                         break
@@ -1391,7 +1393,7 @@ class AtomContainer(object):
             pass
         if int(resiNumber) < 0:
             if i and abs(int(resiNumber)) > i:
-                print "Attention: Residue numbers for chain ID {} might not be correct. " \
+                print "\nAttention: Residue numbers for chain ID {} might not be correct. " \
                       "Please check!".format(chainID)
                 resiSeqOffset = abs(int(resiNumber))
                 self.resiSeqOffsetDict[chainID] = resiSeqOffset
@@ -1421,6 +1423,24 @@ class AtomContainer(object):
             self.resiOffset = 0
         resiNumber = int(resiNumber)
         resiNumberNew = self.resiOffset + resiNumber
+
+        # handling insertion codes with an offset of a multiple of 1000:
+        if insertionCode:
+            try:
+                a = self.insertionCodeDict[insertionCode]
+            except KeyError:
+                #  print len(self.insertionCodeDict)
+                if len(self.insertionCodeDict) >= 9:
+                    a = 9000 + (len(self.insertionCodeDict) - 8) * 100
+                else:
+                    a = (len(self.insertionCodeDict) + 1) * 1000
+                self.insertionCodeDict[insertionCode] = a
+                print '\nINFO: Residues with the insertion Code {} have now an offset of {} added to the residue ' \
+                      'number!'.format(insertionCode, a)
+            if resiNumberNew:
+                resiNumberNew += a
+            else:
+                resiNumberNew = a + resiNumber
         newAtom.setResiSeqNum(resiNumberNew)  # it is very important to set the new value for the variable in the object
         # if insertionCode:
         #     # print resiNumber, newChainID, self.insertionCodeDict
@@ -1539,8 +1559,8 @@ class AtomContainer(object):
                 if newAtom.getAltLoc():
                     success = self.chains[newChainID][resiNumberNew].append(newAtom, True)
                     if not success:
-                        print 'ERROR: Problem while handling insertion codes starting with residue: ', newChainID, ':',\
-                            resiNumber
+                        print '\nERROR: Problem while handling insertion codes starting with residue: ', newChainID, \
+                            ':',resiNumber
                         exit()
                 else:
                     self.resiOffset += 1
@@ -1549,7 +1569,7 @@ class AtomContainer(object):
                     success = self.chains[newChainID][resiNumberNew].append(newAtom)
                     # print 'No, this was created: ', newChainID, resiNumberNew
                     if not success:
-                        print 'ERROR: Problem while handling insertion codes starting with residue: ', newChainID, ':',\
+                        print '\nERROR: Problem while handling insertion codes starting with residue: ', newChainID, ':',\
                             resiNumber
                         exit()
         except NoResidueError:  # creates the residue if it was not there before, happens with first atom of new residue
