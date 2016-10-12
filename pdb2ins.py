@@ -409,12 +409,12 @@ class Data(object):
                 else:
                     answer = 'Yes'
                 print 'INFO: The pdb file contains anisotropic data. Convert to isotropic? (y or n) [Y]: ' \
-                      'PDB2INS used default answer "{}".'.format(answer)
+                      '\nPDB2INS used default answer "{}".'.format(answer)
                 return options['a']
 
     def askWaterOccupancy(self):
         """
-        if the interactive modus is active, the user is asked whether the water ocupancy should be reset to unity.
+        if the interactive mode is True, the user is asked whether the water occupancy should be reset to unity.
         default is to reset occupancy by calling the resetOccupancy function in class Atom.
         :return:
         """
@@ -1363,6 +1363,7 @@ class AtomContainer(object):
         self.atomDict[atomName] = newAtom
         chainID = newAtom.getChainID()
         newChainID = self.getChainID(chainID)
+        # print chainID, newChainID
         newAtom.setChainID(newChainID)
         resiNumber = newAtom.getResiSeqNum().strip()
         resiSeqOffset = None
@@ -1374,13 +1375,17 @@ class AtomContainer(object):
                 resiNameNew = self.resiNameDict[resiName]
             except KeyError:
                 # print resiName
-                while True:
-                    resiNameNew = raw_input('\nWARNING: The residue {} has a name SHELXL cannot handle!\n'
-                                            'Please enter a new 3 digit residue name starting '
-                                            'with a letter: '.format(resiName))
-                    if len(resiName) <= 3:
-                        print 'INFO: Residue {} successfully renamed to {}.'.format(resiName, resiNameNew)
-                        break
+                if not options['i']:
+                    while True:
+                        resiNameNew = raw_input('\nWARNING: The residue {} has a name SHELXL cannot handle!\n'
+                                                'Please enter a new 3 digit residue name starting '
+                                                'with a letter: '.format(resiName))
+                        if len(resiName) <= 3:
+                            print 'INFO: Residue {} successfully renamed to {}.'.format(resiName, resiNameNew)
+                            break
+                else:
+                    resiNameNew = resiName
+                    print '\nWARNING: The residue {} has a name SHELXL cannot handle! Please rename.\n'.format(resiName)
                 self.resiNameDict[resiName] = resiNameNew
 
 
@@ -1430,8 +1435,10 @@ class AtomContainer(object):
                 a = self.insertionCodeDict[insertionCode]
             except KeyError:
                 #  print len(self.insertionCodeDict)
-                if len(self.insertionCodeDict) >= 9:
+                if len(self.insertionCodeDict) >= 9:  # offset should not be larger than 9000
                     a = 9000 + (len(self.insertionCodeDict) - 8) * 100
+                    if a > 10000:
+                        print '\nWARNING: One  or more residues have a residue number larger than 10 000. Please check!'
                 else:
                     a = (len(self.insertionCodeDict) + 1) * 1000
                 self.insertionCodeDict[insertionCode] = a
@@ -1552,6 +1559,7 @@ class AtomContainer(object):
         #         pass
         #     else:
         #         self.resicounter2 += 1
+        # print chainID, resiNumberNew, newAtom.getAltLoc(), insertionCode
         try:
             success = self.chains[newChainID][resiNumberNew].append(newAtom)
             # print 'this was created: ', newChainID, resiNumberNew
@@ -1560,7 +1568,7 @@ class AtomContainer(object):
                     success = self.chains[newChainID][resiNumberNew].append(newAtom, True)
                     if not success:
                         print '\nERROR: Problem while handling insertion codes starting with residue: ', newChainID, \
-                            ':',resiNumber
+                            ':', resiNumber
                         exit()
                 else:
                     self.resiOffset += 1
@@ -1569,8 +1577,8 @@ class AtomContainer(object):
                     success = self.chains[newChainID][resiNumberNew].append(newAtom)
                     # print 'No, this was created: ', newChainID, resiNumberNew
                     if not success:
-                        print '\nERROR: Problem while handling insertion codes starting with residue: ', newChainID, ':',\
-                            resiNumber
+                        print '\nERROR: Problem while handling insertion codes starting with residue: ', newChainID, \
+                            ':', resiNumber
                         exit()
         except NoResidueError:  # creates the residue if it was not there before, happens with first atom of new residue
             self.chains[newChainID][resiNumberNew] = Residue([newAtom])
@@ -1590,7 +1598,10 @@ class AtomContainer(object):
             chainIDnew = self.chainIDdict[chainIDbefore]
         except KeyError:
             self.chainCounter += 1
-            chainIDnew = self.chainCounter
+            if self.chainCounter >= 27:
+                chainIDnew = self.chainCounter + 6
+            else:
+                chainIDnew = self.chainCounter
             self.chainIDdict[chainIDbefore] = chainIDnew
         return chr(chainIDnew + 64)
 
@@ -1986,7 +1997,7 @@ class AtomContainer(object):
             #             atom.setChainID(chr(len(self.chainIDSet)+67))
             if chainID == 'ZZZ':  # and not self.ligandChain:
                 water = True
-                atom.setChainID(chr(len(self.chainIDSet)+66))
+                atom.setChainID(chr(len(self.chainIDSet)+66))  # can create problems if file has more than 26 chains?
             # else:
             #     if ord(chainID.lower())-96 >= int(10) and len(chainIDSet) == int(1):
             #         atom.setChainID(chr(len(chainIDSet)+64))
@@ -2141,7 +2152,8 @@ class Atom(object):
         :return: chain ID (a character in pdb file)
         """
         if not self.residueName == "HOH":
-            self.chainID = self.line[21].upper()
+            self.chainID = self.line[21]
+            # self.chainID = self.line[21].upper()
         else:
             self.hasWater = True
             self.chainID = 'ZZZ'
