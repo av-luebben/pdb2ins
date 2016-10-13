@@ -389,12 +389,12 @@ class Data(object):
             return options['a']
         else:
             if not options['i']:
-                reply = raw_input('\nThe pdb file contains anisotropic atom data. Convert anisotropic atoms to isotropic? '
-                                  '(y or n) [Y]: ')
+                reply = raw_input('\nThe pdb file contains anisotropic atom data. Convert anisotropic atoms to '
+                                  'isotropic? (y or n) [Y]: ')
                 if reply == 'Y' or reply == 'y':
-                    useAnisou = True
-                elif reply == 'N' or reply == 'n':
                     useAnisou = False
+                elif reply == 'N' or reply == 'n':
+                    useAnisou = True
                 elif not reply:
                     useAnisou = False
                 else:
