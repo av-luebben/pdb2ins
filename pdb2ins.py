@@ -722,6 +722,26 @@ class Header(object):
             self.sequenceLines.append(line)
         if line[:5] == "SCALE":
             self.scaleLine.append(line)
+        if line[:6] == 'NUMMDL':
+            self.extractNumberOfModels(line)
+
+    def extractNumberOfModels(self, line):
+        """
+        If the line of the PDB file starts with NUMMDL, the number of models in the file should follow.
+        Is this number greater than one. pdb2ins will terminate. Pdb2ins as well as shelxl cannot handle multiple
+        models.
+        :param line:
+        :return:
+        """
+        l = line[6:].strip()
+        try:
+            numberOfModels = int(l)
+        except ValueError:
+            numberOfModels = 2
+            pass
+        if numberOfModels > 1:
+            print '*** This PDB file contains more than one model. PDB2INS cannot handle multi models. ***'
+            exit()
 
     def extractCell(self):
         """
@@ -2134,8 +2154,15 @@ class Atom(object):
             if self.getPDBAtomName() == 'OT2' or self.getPDBAtomName() == 'OT1':
                 return '13'
             else:
-                print self.getPDBAtomName(), self.getChainID(), self.getResiSeqNum(), self.residueName
-                raise ValueError
+                print ' *** Illegal atom name for atom {} in residue {}:{} {} ***'.format(self.getPDBAtomName(),
+                                                                                          self.getChainID(),
+                                                                                          self.getResiSeqNum().lstrip(),
+                                                                                          self.residueName)
+                # print self.getAtomElement(), self.getPDBAtomName(), '{}:{}'.format(self.getChainID(),
+                #                                                                    self.getResiSeqNum().lstrip()), \
+                #     self.residueName
+                # raise ValueError
+                exit()
 
     def rename(self, newName):
         """
