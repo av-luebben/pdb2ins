@@ -740,7 +740,8 @@ class Header(object):
             numberOfModels = 2
             pass
         if numberOfModels > 1:
-            print '*** This PDB file contains more than one model. PDB2INS cannot handle multi models. ***'
+            print 'ERROR: This PDB file contains more than one model. PDB2INS cannot handle multi models.' \
+                  '*** PDB2INS is terminated without writing an .ins file. ***'
             exit()
 
     def extractCell(self):
@@ -862,7 +863,7 @@ class Header(object):
             else:
                 self.hklf = 3
                 print 'INFO: HKLF is set to default: HKLF{}. Please check if HKLF is correct.'.format(self.hklf)
-        #else:
+        # else:
         #    self.hklf = '4'
         #    print " ** ERROR: Input HKLF code {} not valid. " \
         #          "HKLF code was set to value '4' for F-squared. ** ".format(reply)
@@ -1962,6 +1963,7 @@ class AtomContainer(object):
         else:
             atomObjectList = sorted([aO for aO in self.atomDict.values() if not aO.getAtomElement() == 'H'],
                                     key=lambda atom: (atom.getChainID()+atom.getResiSeqNum()+atom.getPriority()))
+        # maybe change function above to ignoring not only H atoms, but also D atoms?
         atomStringList = []
         makeHFIXfor = None
         residueBefore = None
@@ -2154,14 +2156,14 @@ class Atom(object):
             if self.getPDBAtomName() == 'OT2' or self.getPDBAtomName() == 'OT1':
                 return '13'
             else:
-                print ' *** Illegal atom name for atom {} in residue {}:{} {} ***'.format(self.getPDBAtomName(),
-                                                                                          self.getChainID(),
-                                                                                          self.getResiSeqNum().lstrip(),
-                                                                                          self.residueName)
+                print ' ***ERROR: Illegal atom name for atom {} in ' \
+                      'residue {}:{} {} ***'.format(self.getPDBAtomName(), self.getChainID(),
+                                                    self.getResiSeqNum().lstrip(), self.residueName)
                 # print self.getAtomElement(), self.getPDBAtomName(), '{}:{}'.format(self.getChainID(),
                 #                                                                    self.getResiSeqNum().lstrip()), \
                 #     self.residueName
                 # raise ValueError
+                print '*** PDB2INS is terminated without writing an .ins file. ***'
                 exit()
 
     def rename(self, newName):
