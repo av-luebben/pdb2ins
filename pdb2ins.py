@@ -163,6 +163,9 @@ class Data(object):
                         if os.path.isfile(self.hklfile):
                             print 'INFO: Using file \'{}\' instead.'.format(self.hklfile)
                             break
+                if self.hklfile.startswith('@'):
+                    options['filename'] = self.hklfile
+                    break
                 else:
                     break
         options['d'] = self.hklfile
@@ -383,7 +386,7 @@ class Data(object):
         If no option was given (interactive modus), the user is prompted whether the anisotropic data should be
         converted to isotropic data.
         default answer is 'yes'. 'yes' sets the useAnisou to FALSE, 'no' to TRUE.
-        :return: useAnisou (boolian) or options['a']
+        :return: useAnisou (boolean) or options['a']
         """
         if options['a']:
             return options['a']
