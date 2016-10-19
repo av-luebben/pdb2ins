@@ -557,6 +557,7 @@ class Data(object):
     def findFlack(self):
         try:
             flackLoop = self.parameterDict['_refln.status']
+            # print flackLoop[0], flackLoop[1]
             return flackLoop[0], flackLoop[1]
         except KeyError:
             print 'INFO: No free R flack found.'
@@ -564,6 +565,11 @@ class Data(object):
 
     def checkRescaleData(self):
         self.parameter = self.findRightParameter()
+        # hasFlack = self.findFlack()
+        # if hasFlack:
+        #     self.flackLoop = hasFlack[0]
+        #     self.flackPosition = hasFlack[1]
+
         # print ' rescale', self.rescale
         if self.foundUnmerged:
             minusLoop = self.parameter[0]
@@ -619,6 +625,8 @@ class Data(object):
         If a '?' is found, the line is not used for the .hkl file. If one of the values is greater than 9 999 999, an
         error message is printed. Here the data should be rescaled in the future.
         """
+        notMinus = False
+        notPlus = False
         if self.foundUnmerged:
             h = dataline[self.findHKL()[1]]
             k = dataline[self.findHKL()[3]]
@@ -627,22 +635,30 @@ class Data(object):
             minussigma = dataline[self.parameter[3]]
             plus = dataline[self.parameter[5]]
             plussigma = dataline[self.parameter[7]]
-            if '?' in h or '?' in k or '?' in l or '?' in minus or '?' in minussigma or '?' in plus or '?' in plussigma:
+            if '?' in h or '?' in k or '?' in l:
                 return
-            minus = float(minus)
-            # if minus > 9999999.:
-                # print 'minus', minus
-            if minus > 9999999. and self.biggestMinus <= minus:
-                self.biggestMinus = minus
-                # print self.biggestMinus
-                self.rescale = True
-            plus = float(plus)
-            # if plus > 9999999.:
-                # print 'plus', plus
-            if plus > 9999999. and self.biggestPlus <= plus:
-                self.biggestPlus = plus
-                # print self.biggestPlus
-                self.rescale = True
+            if '?' in minus or '?' in minussigma:
+                notMinus = True
+            if '?' in plus and '?' in plussigma:
+                notPlus = True
+            if notPlus and notMinus:
+                return
+            if not notMinus:
+                minus = float(minus)
+                # if minus > 9999999.:
+                    # print 'minus', minus
+                if minus > 9999999. and self.biggestMinus <= minus:
+                    self.biggestMinus = minus
+                    # print self.biggestMinus
+                    self.rescale = True
+            if not notPlus:
+                plus = float(plus)
+                # if plus > 9999999.:
+                    # print 'plus', plus
+                if plus > 9999999. and self.biggestPlus <= plus:
+                    self.biggestPlus = plus
+                    # print self.biggestPlus
+                    self.rescale = True
         else:
             noFlack = False
             h = dataline[self.findHKL()[1]]
@@ -734,6 +750,11 @@ class Data(object):
         If a '?' is found, the line is not used for the .hkl file. If one of the values is greater than 9 999 999, an
         error message is printed. Here the data should be rescaled in the future.
         """
+        notMinus = False
+        notPlus = False
+        plusString = None
+        minusString = None
+        noFlack = False
         if self.foundUnmerged:
             h = dataline[self.findHKL()[1]]
             k = dataline[self.findHKL()[3]]
@@ -742,16 +763,40 @@ class Data(object):
             minussigma = dataline[self.parameter[3]]
             plus = dataline[self.parameter[5]]
             plussigma = dataline[self.parameter[7]]
-            if '?' in h or '?' in k or '?' in l or '?' in minus or '?' in minussigma or '?' in plus or '?' in plussigma:
+            try:
+                f = dataline[self.findFlack()[1]]
+                if f == 'f':
+                    flag = -1
+                else:
+                    flag = 1
+            except IndexError:
+                noFlack = True
+            except TypeError:
+                noFlack = True
+            if '?' in h or '?' in k or '?' in l:
                 return
             try:
                 h = int(h)
                 k = int(k)
                 l = int(l)
-                minus = float(minus)
-                plus = float(plus)
-                plussigma = float(plussigma)
-                minussigma = float(minussigma)
+            except ValueError:
+                print '1'
+                print '\nERROR: Syntax error in structure factor file. Please handle.\n' \
+                      'Attention: The program will not write an .hkl file from insufficient data.\n'
+                exit()
+            if '?' in minus or '?' in minussigma:
+                notMinus = True
+            if '?' in plus and '?' in plussigma:
+                notPlus = True
+            if notPlus and notMinus:
+                return
+            try:
+                if not notMinus:
+                    minus = float(minus)
+                    minussigma = float(minussigma)
+                if not notPlus:
+                    plus = float(plus)
+                    plussigma = float(plussigma)
             except ValueError:
                 print '\nERROR: Syntax error in structure factor file. Please handle.\n' \
                       'Attention: The program will not write an .hkl file from insufficient data.\n'
@@ -760,10 +805,12 @@ class Data(object):
                 # minus = float(minus)
                 # plus = float(plus)
                 factor = self.getRescaleFactor()
-                minus = factor * minus
-                minussigma = factor * minussigma
-                plus = factor * plus
-                plussigma = factor * plussigma
+                if not notMinus:
+                    minus = factor * minus
+                    minussigma = factor * minussigma
+                if not notPlus:
+                    plus = factor * plus
+                    plussigma = factor * plussigma
             # self.dataString.append('{:>4.0f} {:>3.0f} {:>3.0f} {} {:>7.6n} {:>3} \n'.format(h, k, l, myformat(minus),
             #                                                                                 minussigma, int(-1)))
             # self.dataString.append('{:>4.0f} {:>3.0f} {:>3.0f} {} {:>7.6n} {:>3} \n'.format(h, k, l, myformat(plus),
@@ -776,15 +823,44 @@ class Data(object):
             #                                                                              int(-1)))
             #     self.dataString.append('{:>4.0f} {:>3.0f} {:>3.0f} {: >7.7n} {:>7.6n} {:>3} \n'.format(h, k, l, plus, plussigma,
             #                                                                              int(1)))
-            if minus > 999999 and plus > 999999:
-                minusString = '{: >7.7n}'.format(minus)
-                plusString = '{: >7.7n}'.format(plus)
-            elif minus > 999999:
-                minusString = '{: >7.7n}'.format(minus)
-                plusString = '{: >7.6n}'.format(plus)
-            elif plus > 999999:
-                plusString = '{: >7.7n}'.format(plus)
-                minusString = '{: >7.6n}'.format(minus)
+            if not notMinus and not notPlus:
+                if minus > 999999 and plus > 999999:
+                    minusString = '{: >7.7n}'.format(minus)
+                    plusString = '{: >7.7n}'.format(plus)
+                elif minus > 999999:
+                    minusString = '{: >7.7n}'.format(minus)
+                    plusString = '{: >7.6n}'.format(plus)
+                elif plus > 999999:
+                    plusString = '{: >7.7n}'.format(plus)
+                    minusString = '{: >7.6n}'.format(minus)
+                elif int(minus) < 0 and int(plus) < 0:
+                    minusString = '{: >-6.4n}'.format(minus)
+                    plusString = '{: >-6.4n}'.format(plus)
+                elif int(minus) < 0:
+                    minusString = '{: >-6.4n}'.format(minus)
+                    plusString = '{: >7.6n}'.format(plus)
+                elif int(plus) < 0:
+                    plusString = '{: >-6.4n}'.format(plus)
+                    minusString = '{: >7.6n}'.format(minus)
+                else:
+                    plusString = '{: >7.5n}'.format(plus)
+                    minusString = '{: >7.5n}'.format(minus)
+            if not notMinus and notPlus:
+                plusString = None
+                if minus > 999999:
+                    minusString = '{: >7.7n}'.format(minus)
+                elif int(minus) < 0:
+                    minusString = '{: >-6.4n}'.format(minus)
+                else:
+                    minusString = '{: >7.5n}'.format(minus)
+            if notMinus and not notPlus:
+                minusString = None
+                if plus > 999999:
+                    plusString = '{: >7.7n}'.format(plus)
+                elif int(plus) < 0:
+                    plusString = '{: >-6.4n}'.format(plus)
+                else:
+                    plusString = '{: >7.5n}'.format(plus)
                 # self.dataString.append('{:>4.0f} {:>3.0f} {:>3.0f} {: >7.7n} {:>7.6n} {:>3} \n'.format(h, k, l, minus, minussigma,
                 #                                                                          int(-1)))
                 # self.dataString.append('{:>4.0f} {:>3.0f} {:>3.0f} {: >7.6n} {:>7.6n} {:>3} \n'.format(h, k, l, plus, plussigma,
@@ -799,15 +875,7 @@ class Data(object):
             #                                                                              int(-1)))
             #     self.dataString.append('{:>4.0f} {:>3.0f} {:>3.0f} {: >-6.5n} {:>7.6n} {:>3} \n'.format(h, k, l, plus, plussigma,
             #                                                                              int(1)))
-            elif int(minus) < 0 and int(plus) < 0:
-                minusString = '{: >-6.4n}'.format(minus)
-                plusString = '{: >-6.4n}'.format(plus)
-            elif int(minus) < 0:
-                minusString = '{: >-6.4n}'.format(minus)
-                plusString = '{: >7.6n}'.format(plus)
-            elif int(plus) < 0:
-                plusString = '{: >-6.4n}'.format(plus)
-                minusString = '{: >7.6n}'.format(minus)
+
                 # self.dataString.append('{:>4.0f} {:>3.0f} {:>3.0f} {: >-6.5n} {:>7.6n} {:>3} \n'.format(h, k, l, minus, minussigma,
                 #                                                                          int(-1)))
                 # self.dataString.append('{:>4.0f} {:>3.0f} {:>3.0f} {: >7.6n} {:>7.6n} {:>3} \n'.format(h, k, l, plus, plussigma,
@@ -817,19 +885,32 @@ class Data(object):
             #                                                                              int(-1)))
             #     self.dataString.append('{:>4.0f} {:>3.0f} {:>3.0f} {: >-6.5n} {:>7.6n} {:>3} \n'.format(h, k, l, plus, plussigma,
             #                                                                              int(1)))
-            else:
-                plusString = '{: >7.5n}'.format(plus)
-                minusString = '{: >7.5n}'.format(minus)
+
             # print plusString, minusString
-            if len(plusString) > 7:
-                plusString = plusString[:7]
-            if len(minusString) > 7:
-                minusString = minusString[:7]
+            # if len(plusString) > 7:
+            #     plusString = plusString[:7]
+            # if len(minusString) > 7:
+            #     minusString = minusString[:7]
+            hminus = int(h) * (-1)
+            kminus = int(k) * (-1)
+            lminus = int(l) * (-1)
             # print dataline
-            self.dataString.append('{:>4.0f} {:>3.0f} {:>3.0f} {: >7s} {:>7.6n} {:>3} \n'.format(h, k, l, minusString,
-                                                                                                 minussigma, int(-1)))
-            self.dataString.append('{:>4.0f} {:>3.0f} {:>3.0f} {: >7s} {:>7.6n} {:>3} \n'.format(h, k, l, plusString,
-                                                                                                 plussigma, int(1)))
+            if noFlack:
+                flag = 1
+            # print flack
+            if plusString:
+                if len(plusString) > 7:
+                    plusString = plusString[:7]
+                self.dataString.append('{:>4.0f} {:>3.0f} {:>3.0f} {: >7s} {:>7.6n} {:>3} \n'.format(h, k, l,
+                                                                                                     plusString,
+                                                                                                     plussigma, flag))
+            if minusString:
+                if len(minusString) > 7:
+                    minusString = minusString[:7]
+                self.dataString.append('{:>4.0f} {:>3.0f} {:>3.0f} {: >7s} {:>7.6n} {:>3} \n'.format(hminus, kminus,
+                                                                                                     lminus,
+                                                                                                     minusString,
+                                                                                                     minussigma, flag))
             # print '{: >7s}'.format(plusString), '{: >7s}'.format(minusString)
         else:
             noFlack = False
@@ -853,6 +934,16 @@ class Data(object):
                 print '\nERROR: Syntax error in structure factor file. Please handle.\n' \
                       'Attention: The program will not write an .hkl file from insufficient data.\n'
                 quit()
+            try:
+                f = dataline[self.findFlack()[1]]
+                if f == 'f':
+                    flag = -1
+                else:
+                    flag = 1
+            except IndexError:
+                noFlack = True
+            except TypeError:
+                noFlack = True
             if self.rescale:
                 meassigma = float(meassigma)
                 factor = self.getRescaleFactor()
@@ -873,12 +964,12 @@ class Data(object):
                 measString = '{: >7.6n}'.format(meas)
             if len(measString) > 7:
                 measString = measString[:7]
-            try:
-                flack = dataline[self.findFlack()[2]]
-            except IndexError:
-                noFlack = True
-            except TypeError:
-                noFlack = True
+            # try:
+            #     flag = dataline[self.findFlack()[2]]
+            # except IndexError:
+            #     noFlack = True
+            # except TypeError:
+            #     noFlack = True
             if noFlack:
                 self.dataString.append('{:>4} {:>3} {:>3} {: >7s} {:>7.6n} \n'.format(h, k, l, measString, meassigma))
                 # if meas > 999999:
@@ -890,7 +981,7 @@ class Data(object):
             if not noFlack:
                 # if meas > 999999:
                 self.dataString.append('{:>4} {:>3} {:>3} {: >7s} {:>7.6n} {:>3} \n'.format(h, k, l, measString,
-                                                                                                 meassigma, flack))
+                                                                                                 meassigma, flag))
                 # elif int(meas) < 0:
                 #     self.dataString.append('{:>4} {:>3} {:>3} {:>-6.5n} {:>7.6n} {:>3} \n'.format(h, k, l, meas,
                 #                                                                                   meassigma, flack))
