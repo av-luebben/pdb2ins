@@ -109,7 +109,6 @@ class Data(object):
         self.header.abbreviateSpaceGroup()
         self.header.extractResiSequence()
         self.header.extractScale()
-
         self.header.makeGeneralRefinementInstructions()
         if 'HOH' in self.atomContainer.getOtherResiSet():
             self.askWaterOccupancy()
@@ -125,7 +124,7 @@ class Data(object):
         """
         if not options['i'] and not options['b']:
             while True:
-                doHKL = raw_input('\nCreate .hkl file from structure factor file (cif format) or PDB code? (y or n) '
+                doHKL = raw_input('\nCreate .hkl file from structure factor file (cif) or PDB code? (y or n) '
                                   '[N]: ')
                 if not doHKL:
                     break
@@ -289,6 +288,7 @@ class Data(object):
         :return: line
         """
         useAnisou = True
+        alreadyasked = False
         try:
             for line in self.IO.dataf:
                 if line[0] == "#":
@@ -300,7 +300,9 @@ class Data(object):
                 if line[:6] == "HET   ":
                     self.atomContainer.extractHetRecord(line)
                 if line[:6] == "ANISOU" and useAnisou:
-                    useAnisou = self.askAnisou()
+                    if not alreadyasked:
+                        useAnisou = self.askAnisou()
+                        alreadyasked = True
                     if useAnisou:
                         self.atomContainer.extractAtomAnisou(line)
                 else:
@@ -394,12 +396,10 @@ class Data(object):
             if not options['i']:
                 reply = raw_input('\nThe pdb file contains anisotropic atom data. Convert anisotropic atoms to '
                                   'isotropic? (y or n) [Y]: ')
-                if reply == 'Y' or reply == 'y':
+                if reply == 'Y' or reply == 'y' or not reply:
                     useAnisou = False
                 elif reply == 'N' or reply == 'n':
                     useAnisou = True
-                elif not reply:
-                    useAnisou = False
                 else:
                     useAnisou = False
                     print " *** ERROR: Invalid response \'{}\'. " \
@@ -423,12 +423,13 @@ class Data(object):
         """
         if not options['i']:
             reply = raw_input("\nReset water occupancy to unity? (y/n) [Y]: ")
-            if not reply:
-                resetOccupancy = True
-            if reply == 'y' or reply == 'Y':
+            if not reply or reply == 'y' or reply == 'Y':
                 resetOccupancy = True
             elif reply == 'n' or reply == 'N':
                 resetOccupancy = False
+            else:
+                print 'Invalid response. Water occupancy reset to unity as default.'
+                resetOccupancy = True
         else:
             print 'INFO: PDB2INS reset water occupancy to unity as default.'
             resetOccupancy = True
@@ -509,7 +510,7 @@ class IO(object):
         :return:
         """
         # if not self.options['GUI']:
-        if not self.options['i']:
+        if not self.options['i'] or not self.options['r']:
             while True:
                 pdbRedo = raw_input('\nDownload PDB file from RCSB Protein Data Base (1) or PDB_REDO databank '
                                     '(2)? [1]: ')
@@ -609,7 +610,10 @@ class IO(object):
         else:
             self.workfile = self.workfile
         if self.workfile.startswith('@'):
-            self.askPDBredo()
+            if self.options['r']:
+                self.usePDBredo = True
+            else:
+                self.askPDBredo()
             if self.usePDBredo:
                 self.options['r'] = True
         if self.workfile.startswith('@') and self.options['r']:
@@ -958,14 +962,21 @@ class Header(object):
 
     def abbreviateSpaceGroup(self):
         """
-        The space group is stripped of all white space.
+        The space group is stripped of all white space. Also, when program crashes at this point, the pdb file does not
+        contain the correct keywords or is empty.
         :return:
         """
-        self.shortenedSpaceGroup = self.spaceGroup.replace(" ", "")
+        try:
+            self.shortenedSpaceGroup = self.spaceGroup.replace(" ", "")
+        except AttributeError:
+            print 'ERROR: File does not contain X-ray diffraction data. '
+            exit()
         # print 'This is the space group: ', self.shortenedSpaceGroup
 
     def getAbbrSpaceGroup(self):
-        return self.shortenedSpaceGroup.rstrip('\r\n')
+        short = self.shortenedSpaceGroup.rstrip('\r\n')
+        return short
+
 
     def validateSpaceGroup(self, abbrSpaceGroup):
         """

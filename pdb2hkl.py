@@ -187,7 +187,7 @@ class IO(object):
                         open(pdbFile, 'w').write(gzip.open(filename).read())
                         print "INFO: Fetched structure factor file for PDB code: {}".format(pdbCode)
                     except IOError:
-                        print 'IO ERROR. No file found.'
+                        print 'IO ERROR. No file found. \nNo structure factor file available for this PDB code.'
                         os.remove(pdbFile)
                 else:
                     print "WARNING: {} not valid.\n".format(pdbCode)
@@ -303,6 +303,8 @@ class Data(object):
         """
         parametercounter = 0
         loopcounter = 0
+        if not self.io.datafile:
+            exit()
         for i, line in enumerate(self.io.datafile):
             if len(line.lstrip()) <= 1:
                 continue
@@ -776,6 +778,7 @@ class Data(object):
                 noFlack = True
             except TypeError:
                 noFlack = True
+            # First, all values with an '?' where a number should be have to be rejected.
             if '?' in h or '?' in k or '?' in l:
                 return
             try:
@@ -786,12 +789,15 @@ class Data(object):
                 print '\nERROR: Syntax error in structure factor file. Please handle.\n' \
                       'Attention: The program will not write an .hkl file from insufficient data.\n'
                 exit()
+            # Second, all minus and plus of one line have to be checked for '?' also. Part of the line can be kept,
+            # if only one of them (plus or minus) has a '?'. If both have, the hole line is rejected.
             if '?' in minus or '?' in minussigma:
                 notMinus = True
             if '?' in plus and '?' in plussigma:
                 notPlus = True
             if notPlus and notMinus:
                 return
+            # Only those without a '?' can be converted to float, all others raise a ValueError.
             try:
                 if not notMinus:
                     minus = float(minus)
@@ -803,6 +809,13 @@ class Data(object):
                 print '\nERROR: Syntax error in structure factor file. Please handle.\n' \
                       'Attention: The program will not write an .hkl file from insufficient data.\n'
                 exit()
+            # Third, if munis or plus has the value of zero, the part should be rejected, too.
+            if plus == 0:
+                notPlus = True
+            if minus == 0:
+                notMinus = True
+            if notPlus and notMinus:
+                return
             if self.rescale:
                 # minus = float(minus)
                 # plus = float(plus)
@@ -946,6 +959,8 @@ class Data(object):
                 noFlack = True
             except TypeError:
                 noFlack = True
+            if meas == 0:
+                return
             if self.rescale:
                 meassigma = float(meassigma)
                 factor = self.getRescaleFactor()
