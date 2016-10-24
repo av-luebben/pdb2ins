@@ -511,7 +511,8 @@ class IO(object):
         # if not self.options['GUI']:
         if not self.options['i']:
             while True:
-                pdbRedo = raw_input('Download PDB file from RCSB Protein Data Base (1) or PDB_REDO databank (2)? [1]: ')
+                pdbRedo = raw_input('\nDownload PDB file from RCSB Protein Data Base (1) or PDB_REDO databank '
+                                    '(2)? [1]: ')
                 if not pdbRedo or pdbRedo == '1':
                     self.usePDBredo = False
                     break
@@ -1066,7 +1067,7 @@ class Header(object):
             if not self.wavelength and "WAVELENGTH" in line:
                 try:
                     wavelengthExtracted = float(line.split(':')[-1].lstrip(' ').split(' ')[0].partition(';')[0])
-                    print 'INFO: Wavelength found in pdb file: {}'.format(wavelengthExtracted)
+                    print '\nINFO: Wavelength found in pdb file: {}'.format(wavelengthExtracted)
                 except ValueError:
                     print '\nAttention: PDB2INS could not find a valid wavelength in the pdb file.\n' \
                           'Information found:\n', line

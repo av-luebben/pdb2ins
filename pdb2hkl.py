@@ -129,7 +129,7 @@ class IO(object):
             # print '** ERROR Filename not correct. **'
             # exit()
             while True:
-                self.filename = raw_input("Enter name of a structure factor pdb file to read. "
+                self.filename = raw_input("\nEnter name of a structure factor pdb file to read. "
                                           "To download a structure factor pdb file enter \'@<PDBCODE>\': ")
                 if not os.path.isfile(self.filename) and not '@' in self.filename:
                     newstring = str(self.filename[:4].upper())+(self.filename[-4:])
@@ -223,7 +223,7 @@ class IO(object):
             self.filename = self.filename[1:]
         defaultName = os.path.splitext(self.filename)[0] + '.hkl'
         if not options['i']:
-            self.outputFilename = raw_input("Enter name of .hkl file to be created [{}]: ".format(defaultName))
+            self.outputFilename = raw_input("\nEnter name of .hkl file to be created [{}]: ".format(defaultName))
             if not self.outputFilename:
                 self.outputFilename = defaultName
             elif not self.outputFilename.endswith('.hkl'):
@@ -622,7 +622,9 @@ class Data(object):
     def control(self, dataline):
         """
         Takes the dataline and extracts h, k, l values. depending on data, also merged or unmerged data is extracted.
-        If a '?' is found, the line is not used for the .hkl file. If one of the values is greater than 9 999 999, an
+        If a '?' is found, the line is not used for the .hkl file. Is minus ans plus present in the line and only one
+        of those or their errror has a '?', the other one is used.
+        If one of the values is greater than 9 999 999, an
         error message is printed. Here the data should be rescaled in the future.
         """
         notMinus = False
@@ -691,10 +693,11 @@ class Data(object):
     def writeString(self):
         """
         the function findhkl is called to check whether hkl data is available. If not, the program is terminated.
-        Next the findrigth parameter function is called to find the appropriate data for the .hkl file. This function
-        distinguishes between merged and unmerged data. The loop numbers for the data is extracted and saved to variables.
+        Next the 'find rigth parameter' function is called to find the appropriate data for the .hkl file. This function
+        distinguishes between merged and unmerged data. The loop numbers for the data is extracted and saved to
+        variables.
         The loopdataDict is called with the correct loop number to extract the data for the chosen parameter.
-        The loopdata is reesambled from chunks(words) into lines which are in the length of the number of parameters
+        The loopdata is reassembled from chunks(words) into lines which are in the length of the number of parameters
         given in the loop (enumerator). Each complete line of data is given to the flush function.
         """
         # print 'started write string.'
@@ -780,7 +783,6 @@ class Data(object):
                 k = int(k)
                 l = int(l)
             except ValueError:
-                print '1'
                 print '\nERROR: Syntax error in structure factor file. Please handle.\n' \
                       'Attention: The program will not write an .hkl file from insufficient data.\n'
                 exit()
