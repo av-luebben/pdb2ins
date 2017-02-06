@@ -108,7 +108,7 @@ class Data(object):
         # self.header.extractCell()
         self.header.abbreviateSpaceGroup()
         self.header.extractResiSequence()
-        self.header.extractScale()
+        # self.header.extractScale()
         self.header.makeGeneralRefinementInstructions()
         if 'HOH' in self.atomContainer.getOtherResiSet():
             self.askWaterOccupancy()
@@ -1406,23 +1406,29 @@ class AtomContainer(object):
         # here residue names not starting with a letter are renamed
         resiName = newAtom.getResidueName().strip()
         # print newChainID, resiNumber, resiName
-        if not resiName[0].isalpha():
-            try:
-                resiNameNew = self.resiNameDict[resiName]
-            except KeyError:
-                # print resiName
-                if not options['i']:
-                    while True:
-                        resiNameNew = raw_input('\nWARNING: The residue {} has a name SHELXL cannot handle!\n'
-                                                'Please enter a new 3 digit residue name starting '
-                                                'with a letter: '.format(resiName))
-                        if len(resiName) <= 3:
-                            print 'INFO: Residue {} successfully renamed to {}.'.format(resiName, resiNameNew)
-                            break
-                else:
-                    resiNameNew = resiName
-                    print '\nWARNING: The residue {} has a name SHELXL cannot handle! Please rename.\n'.format(resiName)
-                self.resiNameDict[resiName] = resiNameNew
+
+        # the following part handles residue names starting with a number
+        if resiName:
+            if not resiName[0].isalpha():
+                try:
+                    resiNameNew = self.resiNameDict[resiName]
+                except KeyError:
+                    # print resiName
+                    if not options['i']:
+                        while True:
+                            resiNameNew = raw_input('\nWARNING: The residue {} has a name SHELXL cannot handle!\n'
+                                                    'Please enter a new 3 digit residue name starting '
+                                                    'with a letter: '.format(resiName))
+                            if len(resiName) <= 3:
+                                print 'INFO: Residue {} successfully renamed to {}.'.format(resiName, resiNameNew)
+                                break
+                    else:
+                        resiNameNew = resiName
+                        print '\nWARNING: The residue {} has a name SHELXL cannot handle! Please rename.\n'.format(resiName)
+                    self.resiNameDict[resiName] = resiNameNew
+        else:
+            print 'ERROR: The file has not the expected format. Data type: residue name is missing.'
+            exit()
 
 
         # the following part handles negative residue seq numbers at the beginning of the chain
@@ -1451,6 +1457,7 @@ class AtomContainer(object):
             pass
         resiNumber = newAtom.getResiSeqNum().strip()
         resiName = newAtom.getResidueName()
+
         # In the next part insertion codes are handled, assuming complete residues are inserted.
         insertionCode = newAtom.getInsertionCode()
         # try:
