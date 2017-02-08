@@ -101,6 +101,7 @@ class Data(object):
         self.hasHAtoms = False
         self.neutronData = False
         self.readContent()
+        self.printWarnings()
         self.header.extractWavelength()
         self.atomContainer.extractAllElements()
         self.dealWithHAtoms()
@@ -312,6 +313,17 @@ class Data(object):
             print '\nERROR: File is not a PDB file.\n *** PDB2INS is terminated without writing an .ins file. ***'
             exit()
 
+    def printWarnings(self):
+        """
+        All Warnings that can occur multiple times during reading the ATOM lines of the pdb file should only be printed
+        once. Therefore this function is called after reading all lines and prints the messages.
+        :return:
+        """
+        if self.atomContainer.negResiNumber:
+            print '\n***WARNING: Negative residue numbers found in file. SHELXL might not be able to handle.***\n'
+        if self.atomContainer.overlongResiNum:
+            print '\n***WARNING: One or more residues have a residue number larger than 10 000. Please check!***\n'
+
     def dealWithHAtoms(self):
         """
         This functions is called to find out whether X-Ray diffraction data was given with H atoms (eg. from PHENIX pdb
@@ -394,7 +406,7 @@ class Data(object):
             return options['a']
         else:
             if not options['i']:
-                reply = raw_input('\nThe pdb file contains anisotropic atom data. Convert anisotropic atoms to '
+                reply = raw_input('\nThe pdb file contains anisotropic atom data. \nConvert anisotropic atoms to '
                                   'isotropic? (y or n) [Y]: ')
                 if reply == 'Y' or reply == 'y' or not reply:
                     useAnisou = False
@@ -412,7 +424,7 @@ class Data(object):
                 else:
                     answer = 'Yes'
                 print 'INFO: The pdb file contains anisotropic data. Convert to isotropic? (y or n) [Y]: ' \
-                      '\nPDB2INS used default answer "{}".'.format(answer)
+                      '\n     PDB2INS used default answer "{}".'.format(answer)
                 return options['a']
 
     def askWaterOccupancy(self):
@@ -792,7 +804,7 @@ class Header(object):
             if (cell_a + cell_b + cell_c) < 1:
                 self.cell = None
             if cell_a <= 15.00 or not 20 < alpha < 160:
-                print "\n+++++++++++++++++++Cell may not be correct! Please check.+++++++++++++++++++"
+                print "\nINFO: Warning: Cell may not be correct! Please check."
                 # print self.cell, float(cell_a)
                 #if options['i']:
                 #    print ' ** Error: No cell found. ** '
@@ -841,7 +853,7 @@ class Header(object):
             except TypeError:
                 return False
             if cell_a <= 2.00 or not 20 < alpha < 160:
-                print "+++++++++++++++++++Cell may not be correct! Please check.+++++++++++++++++++"
+                print "INFO: Warning: Cell may not be correct! Please check."
                 #if options['i']:
                 #    print ' ** Error: No cell found. ** '
                 #    exit()
@@ -969,7 +981,7 @@ class Header(object):
         try:
             self.shortenedSpaceGroup = self.spaceGroup.replace(" ", "")
         except AttributeError:
-            print 'ERROR: File does not contain X-ray diffraction data. '
+            print 'ERROR: File does not contain X-ray diffraction data or not in the correct format. '
             exit()
         # print 'This is the space group: ', self.shortenedSpaceGroup
 
@@ -1342,18 +1354,16 @@ class AtomContainer(object):
         self.terminusRestraints = []
         self.resicounter = None
         self.hetIDlist = []
-        self.printwarning = True
         self.ssBonds = False
-        self.overlongChains = {}
+        # self.overlongChains = {}
         self.oldResiName = None
-        self.errorMessageResilength = True
         self.ligandChain = False
         self.incompleteResiString = []
-        self.overlongChainList = []
-        self.printWarning = True
-        self.overlongResiSeqNumbers = {}
+        # self.overlongChainList = []
+        # self.printWarning = True
+        # self.overlongResiSeqNumbers = {}
         self.chainIDold = None
-        self.resicounter2 = None
+        # self.resicounter2 = None
         self.resiNumberBefore = None
         self.resiNameBefore = None
         self.chainIDdict = {}
@@ -1369,7 +1379,9 @@ class AtomContainer(object):
         self.resiTuple = ()
         self.insertionCodeBefore = None
         self.resiNameDict = {}
-        self.waterCounter = 0
+        # self.waterCounter = 0
+        self.negResiNumber = False
+        self.overlongResiNum = False
 
     def extractAtom(self, line):
         """
@@ -1397,10 +1409,14 @@ class AtomContainer(object):
         self.chainIDSet.add(newAtom.getChainID())
         atomName = newAtom.getAtomName()
         self.atomDict[atomName] = newAtom
-        chainID = newAtom.getChainID()
-        newChainID = self.getChainID(chainID)
-        # print chainID, newChainID
-        newAtom.setChainID(newChainID)
+        newChainID = newAtom.getChainID()  # This line must be removed when chainIDs are renumbered with code below.
+
+        # This part renumbers the chainIDs in sequence, relict from shelxl version with only large letter chainIDs
+        # chainID = newAtom.getChainID()
+        # newChainID = self.getChainID(chainID)
+        # # print chainID, newChainID
+        # newAtom.setChainID(newChainID)
+
         resiNumber = newAtom.getResiSeqNum().strip()
         resiSeqOffset = None
         # here residue names not starting with a letter are renamed
@@ -1410,53 +1426,41 @@ class AtomContainer(object):
         # the following part handles residue names starting with a number
         if resiName:
             if not resiName[0].isalpha():
-                try:
-                    resiNameNew = self.resiNameDict[resiName]
-                except KeyError:
-                    # print resiName
-                    if not options['i']:
-                        while True:
-                            resiNameNew = raw_input('\nWARNING: The residue {} has a name SHELXL cannot handle!\n'
-                                                    'Please enter a new 3 digit residue name starting '
-                                                    'with a letter: '.format(resiName))
-                            if len(resiName) <= 3:
-                                print 'INFO: Residue {} successfully renamed to {}.'.format(resiName, resiNameNew)
-                                break
-                    else:
-                        resiNameNew = resiName
-                        print '\nWARNING: The residue {} has a name SHELXL cannot handle! Please rename.\n'.format(resiName)
-                    self.resiNameDict[resiName] = resiNameNew
+                self.changeResiName(resiName)
+                # resiNameNew = self.changeResiName(resiName)
         else:
-            print 'ERROR: The file has not the expected format. Data type: residue name is missing.'
+            print ' *** ERROR: The file has not the expected format. Data type: residue name is missing. ***'
             exit()
 
 
         # the following part handles negative residue seq numbers at the beginning of the chain
-        try:
-            i = self.resiSeqOffsetDict[chainID]
-        except KeyError:
-            i = None
-            self.resiSeqOffsetDict[chainID] = 0
-            pass
         if int(resiNumber) < 0:
-            if i and abs(int(resiNumber)) > i:
-                print "\nAttention: Residue numbers for chain ID {} might not be correct. " \
-                      "Please check!".format(chainID)
-                resiSeqOffset = abs(int(resiNumber))
-                self.resiSeqOffsetDict[chainID] = resiSeqOffset
-            elif not i:
-                resiSeqOffset = abs(int(resiNumber))
-                self.resiSeqOffsetDict[chainID] = resiSeqOffset
-            else:
-                pass
-                # if abs(int(resiSeqOffset)) > int(self.resiSeqOffsetDict[chainID]):
-        try:
-            i = self.resiSeqOffsetDict[chainID]
-            newAtom.setResiSeqNum(int(resiNumber) + i)
-        except KeyError:
-            pass
-        resiNumber = newAtom.getResiSeqNum().strip()
-        resiName = newAtom.getResidueName()
+            self.negResiNumber = True  # Warning is printed after parsing the pdb file.
+        # try:
+        #     i = self.resiSeqOffsetDict[chainID]
+        # except KeyError:
+        #     i = None
+        #     self.resiSeqOffsetDict[chainID] = 0
+        #     pass
+        # if int(resiNumber) < 0:
+        #     if i and abs(int(resiNumber)) > i:
+        #         print "\nAttention: Residue numbers for chain ID {} might not be correct. " \
+        #               "Please check!".format(chainID)
+        #         resiSeqOffset = abs(int(resiNumber))
+        #         self.resiSeqOffsetDict[chainID] = resiSeqOffset
+        #     elif not i:
+        #         resiSeqOffset = abs(int(resiNumber))
+        #         self.resiSeqOffsetDict[chainID] = resiSeqOffset
+        #     else:
+        #         pass
+        #         # if abs(int(resiSeqOffset)) > int(self.resiSeqOffsetDict[chainID]):
+        # try:
+        #     i = self.resiSeqOffsetDict[chainID]
+        #     newAtom.setResiSeqNum(int(resiNumber) + i)
+        # except KeyError:
+        #     pass
+        # resiNumber = newAtom.getResiSeqNum().strip()
+        # resiName = newAtom.getResidueName()
 
         # In the next part insertion codes are handled, assuming complete residues are inserted.
         insertionCode = newAtom.getInsertionCode()
@@ -1464,8 +1468,6 @@ class AtomContainer(object):
         #     self.resiNumberDict[chainID].append(resiNumber)
         # except KeyError:
         #     self.resiNumberDict[chainID] = resiNumber
-        insertionCodeOffset = 0
-        j = 0
         if newChainID != self.chainIDold:
             self.insCodeOccCounter = 0
             self.resiOffset = 0
@@ -1474,24 +1476,10 @@ class AtomContainer(object):
 
         # handling insertion codes with an offset of a multiple of 1000:
         if insertionCode:
-            try:
-                a = self.insertionCodeDict[insertionCode]
-            except KeyError:
-                #  print len(self.insertionCodeDict)
-                if len(self.insertionCodeDict) >= 9:  # offset should not be larger than 9000
-                    a = 9000 + (len(self.insertionCodeDict) - 8) * 100
-                    if a > 10000:
-                        print '\nWARNING: One  or more residues have a residue number larger than 10 000. Please check!'
-                else:
-                    a = (len(self.insertionCodeDict) + 1) * 1000
-                self.insertionCodeDict[insertionCode] = a
-                print '\nINFO: Residues with the insertion Code {} have now an offset of {} added to the residue ' \
-                      'number!'.format(insertionCode, a)
-            if resiNumberNew:
-                resiNumberNew += a
-            else:
-                resiNumberNew = a + resiNumber
+            resiNumberNew = self.handleInsertionCode(insertionCode, resiNumber, resiNumberNew)
         newAtom.setResiSeqNum(resiNumberNew)  # it is very important to set the new value for the variable in the object
+        # insertionCodeOffset = 0
+        # j = 0
         # if insertionCode:
         #     # print resiNumber, newChainID, self.insertionCodeDict
         #     # if not resiNumber == self.resiNumberBefore:
@@ -1583,18 +1571,24 @@ class AtomContainer(object):
         #             pass
         # print self.insertionCodeDict
         # print 'zzzz', resiNumber
-        if resiName == 'HOH':
-            self.waterCounter += 1
-            resiNumberNew = self.waterCounter
-            newAtom.setResiSeqNum(resiNumberNew)
-            # print 'I changed the resinumber of a water residue. ', resiNumberNew
-            # try:
-            #     #newAtom.setResiSeqNum(int(''.join([c for c in resiNumber if c.isdigit()])) + self.insertionCodeDict[newChainID])
-            #     newAtom.setResiSeqNum(int(resiNumber) + self.insertionCodeDict[newChainID])
-            # except KeyError:
-            #     newAtom.setResiSeqNum(int(''.join([c for c in resiNumber if c.isdigit()])) + self.resiOffset)
-            #     print (int(''.join([c for c in resiNumber if c.isdigit()])) + self.resiOffset)
-            #     print newAtom.getResiSeqNum()
+
+        # In the following part water residues are separated to a new chain.
+        # if resiName == 'HOH':
+        #     self.waterCounter += 1
+        #     resiNumberNew = self.waterCounter
+        #     newAtom.setResiSeqNum(resiNumberNew)
+
+        # This part is older!
+        # print 'I changed the resiNumber of a water residue. ', resiNumberNew
+        # try:
+        #     #newAtom.setResiSeqNum(int(''.join([c for c in resiNumber if c.isdigit()])) +
+        #                                       self.insertionCodeDict[newChainID])
+        #     newAtom.setResiSeqNum(int(resiNumber) + self.insertionCodeDict[newChainID])
+        # except KeyError:
+        #     newAtom.setResiSeqNum(int(''.join([c for c in resiNumber if c.isdigit()])) + self.resiOffset)
+        #     print (int(''.join([c for c in resiNumber if c.isdigit()])) + self.resiOffset)
+        #     print newAtom.getResiSeqNum()
+
         # if not self.chainIDold:
         #     self.resicounter2 = 1
         # if newChainID == self.chainIDold:
@@ -1636,7 +1630,69 @@ class AtomContainer(object):
         self.resiNumberBefore = resiNumberNew
         self.resiNameBefore = resiName
 
+    def changeResiName(self, resiName):
+        """
+        this function is called when a residue has a residue name starting with a number. SHELXL cannot handle residues
+        starting with a number, the name must start with a letter. It is possible to rename the residue with the same
+        name, without the program complaining. There are restraints available for ligands starting with a letter!
+        :return:
+        """
+        try:
+            resiNameNew = self.resiNameDict[resiName]
+        except KeyError:
+            # print resiName
+            if not options['i']:
+                while True:
+                    resiNameNew = raw_input('\n *** WARNING: The residue {} has a name SHELXL cannot handle! ***\n'
+                                            '     You can rename the residue now or keep the original name.\n'
+                                            '     Please enter a new 3 digit residue name starting '
+                                            'with a letter [{}]: '.format(resiName, resiName))
+                    if not resiNameNew:
+                        resiNameNew = resiName
+                    if len(resiName) <= 3:
+                        print 'INFO: Residue {} successfully renamed to {}.'.format(resiName, resiNameNew)
+                        break
+            else:
+                resiNameNew = resiName
+                print '\nWARNING: The residue {} has a name SHELXL cannot handle! Please rename.\n'.format(resiName)
+            self.resiNameDict[resiName] = resiNameNew
+        # return resiNameNew
+
+    def handleInsertionCode(self, insertionCode, resiNumber, resiNumberNew):
+        """
+        All atoms with an insertion code are handled here. The residue with the insertion code gets an offset. If the
+        residue number becomes larger than 10000, a warning is printed.
+        :param insertionCode:
+        :param resiNumber:
+        :param resiNumberNew:
+        :return:
+        """
+        try:
+            a = self.insertionCodeDict[insertionCode]
+        except KeyError:
+            #  print len(self.insertionCodeDict)
+            if len(self.insertionCodeDict) >= 9:  # offset should not be larger than 9000
+                a = 9000 + (len(self.insertionCodeDict) - 8) * 100
+                if a > 10000:
+                    self.overlongResiNum = True  # Warning is printed after parsing the pdb file.
+            else:
+                a = (len(self.insertionCodeDict) + 1) * 1000
+            self.insertionCodeDict[insertionCode] = a
+            print '\nINFO: Residues with the insertion Code {} have now an offset of {} added to the residue ' \
+                  'number!'.format(insertionCode, a)
+        if resiNumberNew:
+            resiNumberNew += a
+        else:
+            resiNumberNew = a + resiNumber
+        return resiNumberNew
+
     def getChainID(self, chainIDbefore):
+        """
+        The chainID  is checked if it is peresent in the chainID dictionary. if  not it is added to the chainIDdict.
+        should the chainID be not a character, the chain ID is changed. Is this function necessary or plausible?
+        :param chainIDbefore:
+        :return:
+        """
         try:
             chainIDnew = self.chainIDdict[chainIDbefore]
         except KeyError:
@@ -1648,15 +1704,17 @@ class AtomContainer(object):
             self.chainIDdict[chainIDbefore] = chainIDnew
         return chr(chainIDnew + 64)
 
-    def findOverlongChains(self):
-        """
-        this function looks at all chains and adds all chains longer than 999 residues to the dictionary overlongChains.
-        :return:
-        """
-        for chainID, chain in self.chains.items():
-            if len(chain) > 999:
-                self.overlongChains[chainID] = chain
-        return self.overlongChains
+    # This function is not needed anymore, SHELXL now recognizes chainIDS.
+    # def findOverlongChains(self):
+    #     """
+    #     this function looks at all chains and adds all chains longer than 999 residues to the
+    #     dictionary overlongChains.
+    #     :return:
+    #     """
+    #     for chainID, chain in self.chains.items():
+    #         if len(chain) > 999:
+    #             self.overlongChains[chainID] = chain
+    #     return self.overlongChains
 
     def getTerminalResidues(self):
         """
@@ -1698,6 +1756,11 @@ class AtomContainer(object):
         return notBoundNResis, notBoundCResis
 
     def _nIsNotBound(self, resi):
+        """
+        If the nitrogen has no other atom in direct distance, it is assumed that is the terminal nitrogen atom.
+        :param resi:
+        :return:
+        """
         for atom in resi:
             if atom.getPDBAtomName() == 'N':
                 atom1 = atom
@@ -1778,6 +1841,10 @@ class AtomContainer(object):
         """
         chainID = j[0].getChainID()
         if chainID == 'XXX' or chainID == 'ZZZ':
+            print 'ZZZ'
+            return
+        if j[0].getResidueName() == 'HOH':
+            print 'HOH'
             return
         num = j[0].getResiSeqNum()
         nameList = [atom.getPDBAtomName() for atom in j]
@@ -2039,9 +2106,13 @@ class AtomContainer(object):
             #         if chainID == 'ZZZ' and self.ligandChain:
             #             water = True
             #             atom.setChainID(chr(len(self.chainIDSet)+67))
-            if chainID == 'ZZZ':  # and not self.ligandChain:
-                water = True
-                atom.setChainID(chr(len(self.chainIDSet)+66))  # can create problems if file has more than 26 chains?
+
+            # This part only needed for HOH in separate chain, not needed if HOH not treated in special way.
+            # if chainID == 'ZZZ':  # and not self.ligandChain:
+            #     water = True
+            #     atom.setChainID(chr(len(self.chainIDSet)+66))  # can create problems if file has more than 26 chains?
+
+            # This part is older!
             # else:
             #     if ord(chainID.lower())-96 >= int(10) and len(chainIDSet) == int(1):
             #         atom.setChainID(chr(len(chainIDSet)+64))
@@ -2050,45 +2121,66 @@ class AtomContainer(object):
             #             print 'The overlong chain A will be without offset.'
             #             self.printWarning = False
             #         longchain = True
+
+            # This part only needed for HOH in separate chain, not needed if HOH not treated in special way.
+            # if not residueNew == residueBefore or not chainID == chainIDbefore:
+            #     if not atom.getResidueName() == 'HOH':
+            #         # if longchain:
+            #         #     atomStringList.append("\nRESI {} {}\n".format('{:0>3.0f}'.format(float(residueNew)),
+            #         #                                                   atom.getResidueName()))
+            #         if atom.getChainID() in self.chainIDSet:
+            #             try:
+            #                 makeHFIXfor = self.chains[atom.getChainID()][atom.getResiSeqNum()].getLastAtomInResi()
+            #             except NoResidueError:
+            #                 pass
+            #         # else:
+            #         atomStringList.append("\nRESI {} {}\n".format('{0}:{1:{2}f}'.format(atom.getChainID(),
+            #                                                                             float(residueNew), padding),
+            #                                                       atom.getResidueName()))
+            #     else:
+            #         # print 'water Resi found with new chain ID and string written: ', waterResiCounter, residueNew
+            #         waterResiCounter += 1
+            #         waterResiNum = waterResiCounter
+            #         self.waterResiNumbers.append(waterResiNum)
+            #         atomStringList.append("\nRESI {} {}\n".format('{0}:{1:{2}f}'.format(atom.getChainID(),
+            #                                                                             float(waterResiNum), padding),
+            #                                                       atom.getResidueName()))
+            #         # print "\nRESI {} {}\n".format('{0}:{1:{2}f}'.format(atom.getChainID(), float(waterResiNum),
+            #         #                                                     padding), atom.getResidueName())
+
+            # This part is needed if HOH is not treated in a special way in an extra chain:
             if not residueNew == residueBefore or not chainID == chainIDbefore:
-                if not atom.getResidueName() == 'HOH':
-                    # if longchain:
-                    #     atomStringList.append("\nRESI {} {}\n".format('{:0>3.0f}'.format(float(residueNew)),
-                    #                                                   atom.getResidueName()))
-                    if atom.getChainID() in self.chainIDSet:
-                        try:
-                            makeHFIXfor = self.chains[atom.getChainID()][atom.getResiSeqNum()].getLastAtomInResi()
-                        except NoResidueError:
-                            pass
-                    # else:
-                    atomStringList.append("\nRESI {} {}\n".format('{0}:{1:{2}f}'.format(atom.getChainID(),
-                                                                                        float(residueNew), padding),
-                                                                  atom.getResidueName()))
-                else:
-                    # print 'water Resi found with new chain ID and string written: ', waterResiCounter, residueNew
-                    waterResiCounter += 1
-                    waterResiNum = waterResiCounter
-                    self.waterResiNumbers.append(waterResiNum)
-                    atomStringList.append("\nRESI {} {}\n".format('{0}:{1:{2}f}'.format(atom.getChainID(),
-                                                                                        float(waterResiNum), padding),
-                                                                  atom.getResidueName()))
-                    # print "\nRESI {} {}\n".format('{0}:{1:{2}f}'.format(atom.getChainID(), float(waterResiNum),
-                    #                                                     padding), atom.getResidueName())
+                # if longchain:
+                #     atomStringList.append("\nRESI {} {}\n".format('{:0>3.0f}'.format(float(residueNew)),
+                #                                                   atom.getResidueName()))
+                if atom.getChainID() in self.chainIDSet and not atom.getResidueName() == 'HOH':
+                    try:
+                        makeHFIXfor = self.chains[atom.getChainID()][atom.getResiSeqNum()].getLastAtomInResi()
+                    except NoResidueError:
+                        pass
+                # else:
+                atomStringList.append("\nRESI {} {}\n".format('{0}:{1:{2}f}'.format(atom.getChainID(),
+                                                                                    float(residueNew), padding),
+                                                              atom.getResidueName()))
+
             if makeHFIXfor:
                 if atom.getPDBAtomName() in makeHFIXfor:
                     self.incompleteResiString.append('REM HFIX 0 {}_{}\n'.format(atom.getPDBAtomName(),
                                                      '{0}:{1:{2}f}'.format(atom.getChainID(), float(residueNew),
                                                                            padding)))
+
+            # This part is older!
             # if chainID == chainIDbefore and atom.getResidueName() == 'HOH':
             #     print 'water resi found with same chain ID and string written: ', waterResiCounter, residueNew
             #     waterResiCounter += 1
             #     waterResiNum = waterResiCounter
             #     self.waterResiNumbers.append(waterResiNum)
             #     atomStringList.append("\nRESI {} {}\n".format('{0}:{1:{2}f}'
-            #                                                   .format(atom.getChainID(), float(waterResiNum), padding),
+            # .format(atom.getChainID(), float(waterResiNum), padding),
             #                                                   atom.getResidueName()))
             #     print "\nRESI {} {}\n".format('{0}:{1:{2}f}'.format(atom.getChainID(), float(waterResiNum), padding),
             #                                   atom.getResidueName())
+
             atomStringList.append(atom.asShelxString(self.elementList, cell))
             chainIDbefore = chainID
             residueBefore = str(residueNew)
@@ -2178,7 +2270,7 @@ class Atom(object):
             if self.getPDBAtomName() == 'OT2' or self.getPDBAtomName() == 'OT1':
                 return '13'
             else:
-                print ' ***ERROR: Illegal atom name for atom {} in ' \
+                print ' *** ERROR: Illegal atom name for atom {} in ' \
                       'residue {}:{} {} ***'.format(self.getPDBAtomName(), self.getChainID(),
                                                     self.getResiSeqNum().lstrip(), self.residueName)
                 # print self.getAtomElement(), self.getPDBAtomName(), '{}:{}'.format(self.getChainID(),
@@ -2202,12 +2294,14 @@ class Atom(object):
         Water molecules are exracted separately.
         :return: chain ID (a character in pdb file)
         """
-        if not self.residueName == "HOH":
-            self.chainID = self.line[21]
-            # self.chainID = self.line[21].upper()
-        else:
-            self.hasWater = True
-            self.chainID = 'ZZZ'
+        self.chainID = self.line[21]
+        # This part is only needed if water residues are treated in special way (in different chain).
+        # if not self.residueName == "HOH":
+        #     self.chainID = self.line[21]
+        #     # self.chainID = self.line[21].upper()
+        # else:
+        #     self.hasWater = True
+        #     self.chainID = 'ZZZ'
 
     def getChainID(self):
         return self.chainID
@@ -2288,7 +2382,7 @@ class Atom(object):
 
     def getUanis(self, cell):
         """
-        The u anisou are transformes to fractional coordinates using transformation.py
+        The u anisou are transforms to fractional coordinates using transformation.py
         :param cell: Needed to transform the ADP.
         :return: fractional ADP in the correct SHELX order.
         """
