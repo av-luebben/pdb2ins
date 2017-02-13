@@ -320,9 +320,12 @@ class Data(object):
         :return:
         """
         if self.atomContainer.negResiNumber:
-            print '\n***WARNING: Negative residue numbers found in file. SHELXL might not be able to handle.***\n'
+            print '\n*** WARNING: Negative residue numbers found in file. SHELXL might not be able to handle.***\n'
         if self.atomContainer.overlongResiNum:
-            print '\n***WARNING: One or more residues have a residue number larger than 10 000. Please check!***\n'
+            print '\n*** WARNING: One or more residues have a residue number larger than 10 000. Please check!***\n'
+        if self.atomContainer.wrongResiName:
+            print '\n*** Warning: The files contain residue names starting with a number. \n' \
+                  '    SHELXL can only handle residues names starting with a letter.\n'
 
     def dealWithHAtoms(self):
         """
@@ -522,7 +525,7 @@ class IO(object):
         :return:
         """
         # if not self.options['GUI']:
-        if not self.options['i'] or not self.options['r']:
+        if not self.options['i'] and not self.options['r']:
             while True:
                 pdbRedo = raw_input('\nDownload PDB file from RCSB Protein Data Base (1) or PDB_REDO databank '
                                     '(2)? [1]: ')
@@ -534,6 +537,8 @@ class IO(object):
                     break
                 else:
                     pass
+        if self.options['i'] and not self.options['r']:
+            self.usePDBredo = False
 
     def askFilename(self):
         """
@@ -1382,6 +1387,7 @@ class AtomContainer(object):
         # self.waterCounter = 0
         self.negResiNumber = False
         self.overlongResiNum = False
+        self.wrongResiName = False
 
     def extractAtom(self, line):
         """
@@ -1654,6 +1660,7 @@ class AtomContainer(object):
                         break
             else:
                 resiNameNew = resiName
+                self.wrongResiName = True
                 print '\nWARNING: The residue {} has a name SHELXL cannot handle! Please rename.\n'.format(resiName)
             self.resiNameDict[resiName] = resiNameNew
         # return resiNameNew
