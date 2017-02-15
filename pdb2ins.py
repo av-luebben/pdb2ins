@@ -765,7 +765,7 @@ class Header(object):
             numberOfModels = 2
             pass
         if numberOfModels > 1:
-            print 'ERROR: This PDB file contains more than one model. PDB2INS cannot handle multi models.' \
+            print 'ERROR: This PDB file contains more than one model. PDB2INS cannot handle multiple models.\n' \
                   '*** PDB2INS is terminated without writing an .ins file. ***'
             exit()
 
@@ -993,7 +993,6 @@ class Header(object):
     def getAbbrSpaceGroup(self):
         short = self.shortenedSpaceGroup.rstrip('\r\n')
         return short
-
 
     def validateSpaceGroup(self, abbrSpaceGroup):
         """
@@ -1489,7 +1488,7 @@ class AtomContainer(object):
         # if insertionCode:
         #     # print resiNumber, newChainID, self.insertionCodeDict
         #     # if not resiNumber == self.resiNumberBefore:
-        #         # print 'residuenumber changed, has insertion code'
+        #         # print 'residue number changed, has insertion code'
         #     try:
         #         insertionCodeOffset = self.insertionCodeDict[newChainID]
         #     except KeyError:
@@ -2039,6 +2038,7 @@ class AtomContainer(object):
     def asShelxString(self, cell):
         """
         Takes all objects in Atomdict and sorts them according to chain ID and Residue number and priority.
+        Since neg residue numbers were introduced, the sorting has to be done trice.
         But priority is only applied if no H or D atoms are given in natural aa residues. otherwise priority is not used
         to sort the atoms in one residue according to a given template.
         AtomObjectList is searched for the start of a new Residue and a new line RESI is introduced before.
@@ -2046,8 +2046,8 @@ class AtomContainer(object):
          transformed into a number (first number of four) followed by the residue number
          (i.e. residue chain A residue number 23 yields 1023).
         The last element of the RESI line is the residue name; three letters representing the residues amino acid.
-        chainID 'XXX' = offset for chains with more than 999 residues.
-        chainID 'ZZZ' = water residues
+        chainID 'XXX' = offset for chains with more than 999 residues. (old)
+        chainID 'ZZZ' = water residues (old)
         The function getLastAtomInResi(Residue) is called to find incomplete residues. those get a HFIX 0 instruction
         for the last present atom before the missing atom(s). this instruction is writen into the incompleteResiString.
         :return: All atoms sorted by chains and residues to give a string.
@@ -2057,8 +2057,8 @@ class AtomContainer(object):
         if self.neut or self.keepHAtoms:
             atomObjectList = sorted(self.atomDict.values(), key=lambda atom: (atom.getChainID()+atom.getResiSeqNum()))
         else:
-            atomObjectList = sorted([aO for aO in self.atomDict.values() if not aO.getAtomElement() == 'H'],
-                                    key=lambda atom: (atom.getChainID()+atom.getResiSeqNum()+atom.getPriority()))
+            atomObjectList = sorted(sorted(sorted([aO for aO in self.atomDict.values() if not aO.getAtomElement() == 'H'], key=lambda atom: (atom.getPriority()))
+                                           , key=lambda atom: (atom.getResiSeqNumAsInt())), key=lambda atom: (atom.getChainID()))
         # maybe change function above to ignoring not only H atoms, but also D atoms?
         atomStringList = []
         makeHFIXfor = None
@@ -2494,6 +2494,9 @@ class Atom(object):
 
     def getResiSeqNum(self):
         return '{:>4}'.format(self.resiSeqNum)
+
+    def getResiSeqNumAsInt(self):
+        return int(self.resiSeqNum)
 
     def getAtomSFAC(self, elementList):
         """
