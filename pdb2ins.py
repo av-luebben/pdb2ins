@@ -1387,6 +1387,7 @@ class AtomContainer(object):
         self.negResiNumber = False
         self.overlongResiNum = False
         self.wrongResiName = False
+        self.altLocDict = {}
 
     def extractAtom(self, line):
         """
@@ -2012,9 +2013,11 @@ class AtomContainer(object):
         alreadyInBondList = []
         self.findCysSAtoms()
         for i, atom1 in enumerate(self.getCysSAtoms()):
+            altLoc1 = atom1.getAltLoc()
             for j in xrange(len(self.getCysSAtoms())-i-1):
                 j += i+1
                 atom2 = self.getCysSAtoms()[j]
+                altLoc2 = atom2.getAltLoc()
                 # print atom1.getAtomCoord(), atom2.getAtomCoord()
                 if self.getAtomDistance(atom1.getAtomCoord(), atom2.getAtomCoord()) < 2.5:
                     self.ssBonds = True
@@ -2022,18 +2025,143 @@ class AtomContainer(object):
                     chain2 = atom2.getChainID()
                     num1 = atom1.getResiSeqNum()
                     num2 = atom2.getResiSeqNum()
-                    if atom1 not in alreadyInBondList and atom2 not in alreadyInBondList:
-                        self.ssBondList.append('\nDFIX 2.031 SG_{0}:{1:{4}f} SG_{2}:{3:{4}f}'
-                                               .format(chain1, float(num1), chain2, float(num2), padding))
-                        self.ssBondList.append('\nDANG 3.035 SG_{0}:{1:{4}f} CB_{2}:{3:{4}f}'
-                                               .format(chain1, float(num1), chain2, float(num2), padding))
-                        self.ssBondList.append('\nDANG 3.035 SG_{0}:{1:{4}f} CB_{2}:{3:{4}f}'
-                                               .format(chain2, float(num2), chain1, float(num1), padding))
+                    if chain1 == chain2 and num1 == num2:
+                        pass
+                    else:
+                        if altLoc1 or altLoc2:
+                            alreadyInBondList = self.makeSSBonds2(chain1, chain2, atom1, atom2, num1, num2, altLoc1,
+                                                                  altLoc2, alreadyInBondList)
+                        else:
+                            alreadyInBondList = self.makeSSBonds(chain1, chain2, atom1, atom2, num1, num2,
+                                                                 alreadyInBondList)
                     alreadyInBondList.append(atom1)
                     alreadyInBondList.append(atom2)
 
     def getSSBonds(self):
         return self.ssBondList
+
+    def makeSSBonds2(self, chain1, chain2, atom1, atom2, num1, num2, altLoc1, altLoc2, alreadyInBondList):
+        """
+        All sulfur atoms with an alternate location code are handled here. These atoms will need Part instructions in
+        the .ins file before and after teh atom information. Also the restraints for disulfide bridges will have to be
+        addressed differently. After the chain:residuenumber a caret followed by a small letter assigning to the correct
+        part is needed. e.g. 'PART 1' will need '^a' as appendix to give 'A:123^a'.
+        The AltLoc given in the .pdb file can be a number or letter, so the symbol has to be assigned a fixed meaning
+        for the .ins file. Numbers are kept to give the same number for the PART instruction referenced as given by
+        altLocToRestraintDict for SSBONDS, letters are un-capitalized and taken for the SSBOND restraints and
+        referenced for PART as before.
+
+        :param chain1:
+        :param chain2:
+        :param atom1:
+        :param atom2:
+        :param num1:
+        :param num2:
+        :param altLoc1:
+        :param altLoc2:
+        :return:
+        """
+        # altLocToRestraintDict = {'1': 'a', '2': 'b', '3': 'c', '4': 'd', '5': 'e', '6': 'f', '7': 'g', '8': 'h',
+        #                          '9': 'i', '10': 'j', '11': 'k', '12': 'l', '13': 'm', '14': 'n', '15': 'o', '16': 'p',
+        #                          '17': 'q', '18': 'r', '19': 's', '20': 't', '21': 'u', '22': 'v', '23': 'w', '24': 'x',
+        #                          '25': 'y', '26': 'z'}
+        altLocToRestraintDict = {1: 'a', 2: 'b', 3: 'c', 4: 'd', 5: 'e', 6: 'f', 7: 'g', 8: 'h',
+                                 9: 'i', 10: 'j', 11: 'k', 12: 'l', 13: 'm', 14: 'n', 15: 'o', 16: 'p',
+                                 17: 'q', 18: 'r', 19: 's', 20: 't', 21: 'u', 22: 'v', 23: 'w', 24: 'x',
+                                 25: 'y', 26: 'z'}
+        # altLoc1 = str(altLoc1)
+        # altLoc2 = str(altLoc2)
+        try:
+            altAltLoc1 = self.altLocDict[altLoc1]
+        except KeyError:
+            try:
+                altLoc1 = int(altLoc1)
+                altAltLoc1 = altLocToRestraintDict[altLoc1]  # the number gets the corresponding letter assigned
+                self.altLocDict[altLoc1] = altAltLoc1  # the match is saved to the altLocDict
+            except ValueError:
+                altLoc1 = str(altLoc1)
+                if altLoc1.lower() != altLoc1:
+                    altAltLoc1 = altLoc1.lower()
+                    self.altLocDict[altLoc1] = altAltLoc1  # the upper case letter has reference to the needed letter.
+                # altLoc1 = ord(altLoc1.lower())-96  # the letter gets the appropriate number assigned
+                else:
+                    altAltLoc1 = altLoc1
+                    self.altLocDict[altLoc1] = altAltLoc1  # here the altAltLoc and altLoc are the same, but no KeyError
+        try:
+            altAltLoc2 = self.altLocDict[altLoc2]
+        except KeyError:
+            try:
+                altLoc2 = int(altLoc2)
+                altAltLoc2 = altLocToRestraintDict[altLoc2]  # the number gets the corresponding letter assigned
+                self.altLocDict[altLoc2] = altAltLoc2  # the match is saved to the altLocDict
+            except ValueError:
+                altLoc2 = str(altLoc2)
+                if altLoc2.lower() != altLoc1:
+                    altAltLoc1 = altLoc2.lower()
+                    self.altLocDict[altLoc2] = altAltLoc1  # the upper case letter has reference to the needed letter.
+                # altLoc1 = ord(altLoc1.lower())-96  # the letter gets the appropriate number assigned
+                else:
+                    altAltLoc1 = altLoc1
+                    self.altLocDict[
+                        altLoc1] = altAltLoc1  # here the altAltLoc and altLoc are the same, but no KeyError
+            # if altLoc1.isdigit():
+            #     altAltLoc1 = altLocToRestraintDict[altLoc1]
+            #     self.altLocDict[altLoc1] = altAltLoc1
+            # elif altLoc1.isalpha():
+            #     for key, value in altLocToRestraintDict:
+            #         if value == altLoc1.lower():
+            #             newAltLoc = key  # here should the PART number be assigned.
+            #             if altLoc1.lower() != altLoc1:
+            #                 altAltLoc1 = altLoc1.lower()  # altAltLoc should be lower case
+            #                 self.altLocDict[altLoc1] = altAltLoc1  # now the lower case can be directly assigned in try.
+            #                 self.altLocDict[altAltLoc1] = newAltLoc
+            #             else:
+            #                 self.altLocDict[altLoc1] = newAltLoc
+            #                 altAltLoc1 = altLoc1
+            # else:
+            #     self.makeSSBonds(chain1, chain2, atom1, atom2, num1, num2, alreadyInBondList)
+        # try:
+        #     altAltLoc2 = self.altLocDict[altLoc2]
+        # except KeyError:
+        #     if altLoc2.isdigit():
+        #         altAltLoc2 = altLocToRestraintDict[altLoc2]
+        #         self.altLocDict[altLoc2] = altAltLoc2
+        #     elif altLoc2.isalpha():
+        #         for key, value in altLocToRestraintDict:
+        #             if value == altLoc2.lower():
+        #                 newAltLoc = key  # here should the PART number be assigned.
+        #                 if altLoc2.lower() != altLoc1:
+        #                     altAltLoc2 = altLoc2.lower()  # altAltLoc should be lower case
+        #                     self.altLocDict[altLoc2] = altAltLoc2  # now the lower case can be directly assigned in try.
+        #                     self.altLocDict[altAltLoc2] = newAltLoc
+        #                 else:
+        #                     self.altLocDict[altLoc2] = newAltLoc
+        #                     altAltLoc2 =altLoc2
+        #     else:
+        #         print 'INFO: Problem handling alternate location code during creation of disulfide bond restraints.'
+        #         self.makeSSBonds(chain1, chain2, atom1, atom2, num1, num2, alreadyInBondList)
+        if atom1 not in alreadyInBondList and atom2 not in alreadyInBondList:
+            self.ssBondList.append('\nDFIX 2.031 SG_{}:{}^{} SG_{}:{}^{}'
+                                   .format(chain1, num1.strip(), altAltLoc1, chain2, num2.strip(), altAltLoc2))
+            self.ssBondList.append('\nDANG 3.035 SG_{}:{}^{} CB_{}:{}^{}'
+                                   .format(chain1, num1.strip(), altAltLoc1, chain2, num2.strip(), altAltLoc2))
+            self.ssBondList.append('\nDANG 3.035 SG_{}:{}^{} CB_{}:{}^{}'
+                                   .format(chain2, num2.strip(), altAltLoc1, chain1, num1.strip(), altAltLoc2))
+            alreadyInBondList.append(atom1)
+            alreadyInBondList.append(atom2)
+        return alreadyInBondList
+
+    def makeSSBonds(self, chain1, chain2, atom1, atom2, num1, num2, alreadyInBondList):
+        if atom1 not in alreadyInBondList and atom2 not in alreadyInBondList:
+            self.ssBondList.append('\nDFIX 2.031 SG_{0}:{1:{4}f} SG_{2}:{3:{4}f}'
+                                   .format(chain1, float(num1), chain2, float(num2), padding))
+            self.ssBondList.append('\nDANG 3.035 SG_{0}:{1:{4}f} CB_{2}:{3:{4}f}'
+                                   .format(chain1, float(num1), chain2, float(num2), padding))
+            self.ssBondList.append('\nDANG 3.035 SG_{0}:{1:{4}f} CB_{2}:{3:{4}f}'
+                                   .format(chain2, float(num2), chain1, float(num1), padding))
+            alreadyInBondList.append(atom1)
+            alreadyInBondList.append(atom2)
+        return alreadyInBondList
 
     def asShelxString(self, cell):
         """

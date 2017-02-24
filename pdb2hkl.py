@@ -297,7 +297,7 @@ class Data(object):
         contains.
         The parameters must start with '_' and the first line without a parameter at the beginning will be considered
         as indicator the at the loop can end (from here on only the values for the aforementioned parameters are given).
-        Loops ara counted. All parameters of loops are saved into parameterDict with the loop number it occurred in.
+        Loops are counted. All parameters of loops are saved into parameterDict with the loop number it occurred in.
          All values/data lines from a loop (not parameters) are given to readLoopDataLine function.
         :return:
         """
@@ -308,16 +308,16 @@ class Data(object):
         for i, line in enumerate(self.io.datafile):
             if len(line.lstrip()) <= 1:
                 continue
-            if line[0] == "#":
+            elif line[0] == "#":
                 loopEnds = True
                 parametercounter = 0
                 continue
-            if line[:5] == 'loop_':
+            elif line[:5] == 'loop_':
                 # print 'here the loops starts.', i, line
                 loopcounter += 1
                 self.loop = True
                 loopEnds = False
-            if line.lstrip()[0] == '_':
+            elif line.lstrip()[0] == '_':
                 # print '_line found', i, line
                 if self.loop and loopEnds:
                     # print 'here the loop ends.'
@@ -325,10 +325,11 @@ class Data(object):
                     self.underscore = True
                 if self.loop:
                     # print 'loop', i, line, \
-                    #     'loopcounter', loopcounter
+                    #       'loopcounter', loopcounter
                     self.parameterDict[line.split(' ')[0].rstrip('\n')] = (loopcounter, parametercounter)
                     # print self.parameterDict
                     parametercounter += 1
+                    # print 'parametercounter', parametercounter
                     self.underscore = True
                 else:
                     # print 'else line', i, line
@@ -336,15 +337,18 @@ class Data(object):
             else:
                 # if i <= 80:
                     # print 'this arrives in else', i, line
-                    # print 'this is the loopcounter: {} and this is loop {} and underscore {}'.format(loopcounter,
-                    #                                                                                  self.loop,
-                    #                                                                                  self.underscore)
+
                 if self.loop:
-                    if not line[:5] == 'loop_':
+                    # if not line[:5] == 'loop_':
+                    #     print 'this is the loopcounter: {} and this is loop {},  ' \
+                    #           'loopEnds is {} and parametercounter {}'.format(loopcounter, self.loop, loopEnds,
+                    #                                                           parametercounter)
 
                     # if i <= 80:
                     #     print 'this arrives in else, within a loop', i, line
+                    if not loopEnds:
                         self.parameterCount[loopcounter] = parametercounter
+                        # print self.parameterCount
                         self.underscore = False
                         self.readLoopDataLine(line, loopcounter)
                 # else:
@@ -362,7 +366,9 @@ class Data(object):
         """
         # print type(line), line
         # if '?' not in line:
-        # print  'this is loop data line', line, 'this is the loopcounter', loopcounter
+        # if loopcounter == 3:
+        #     print 'this is loop data line', line, 'this is the loopcounter', loopcounter
+        #     exit()
         try:
             self.loopDataDict[loopcounter] += line[:-1].split()
         except KeyError:
@@ -675,6 +681,7 @@ class Data(object):
             meassigma = dataline[self.parameter[3]]
             if '?' in h or '?' in k or '?' in l or '?' in meas or '?' in meassigma:
                 return
+            # print h, k, l, meas, meassigma
             try:
                 meas = float(meas)
             except ValueError:
@@ -704,12 +711,13 @@ class Data(object):
         """
         # print 'started write string.'
         hLoop, hnum, kLoop, kNum, lLoop, lNum = self.findHKL()
-        # print 'i am in write string an d have hkl:', self.findHKL()
+        # print 'i am in write string and have hkl:', self.findHKL()
         if not hLoop == kLoop == lLoop:
             print 'ERROR: Not all data necessary in one loop.'
             exit(2)
         # self.parameter = self.findRightParameter()
         if self.foundUnmerged:
+            # print 'found unmerged'
             minusLoop = self.parameter[0]
             # minusNum = self.parameter[1]
             minusSigmaLoop = self.parameter[2]
@@ -729,19 +737,26 @@ class Data(object):
                     self.flush(dataline)
                     dataline = []
         else:
+            # print 'found merged'
             measLoop = self.parameter[0]
             # measNum = self.parameter[1]
             measSigmaLoop = self.parameter[2]
             # measSigmaNum = self.parameter[3]
             # flackLoop, flackNum = self.findFlack()
             enumerator = self.parameterCount[measLoop]
+            # print 'measloop', measLoop, measSigmaLoop, enumerator
+            # print self.parameterCount
+            # for key, value in self.parameterCount.items():
+            #     print 'parameterCount', key, value
             if not measLoop == measSigmaLoop:
                 print 'ERROR: Not all data necessary found in one loop.'
                 exit(2)
             dataline = []
             for word in self.loopDataDict[measLoop]:
                 dataline.append(word)
+                # print dataline[-1], len(dataline), enumerator
                 if len(dataline) == enumerator:
+                    # print 'flush dataline', enumerator
                     self.flush(dataline)
                     dataline = []
             if self.foundUnmerged:
@@ -760,7 +775,9 @@ class Data(object):
         plusString = None
         minusString = None
         noFlack = False
+        # print 'I am in flush', dataline
         if self.foundUnmerged:
+            # print dataline
             h = dataline[self.findHKL()[1]]
             k = dataline[self.findHKL()[3]]
             l = dataline[self.findHKL()[5]]
@@ -916,16 +933,14 @@ class Data(object):
             if plusString:
                 if len(plusString) > 7:
                     plusString = plusString[:7]
-                self.dataString.append('{:>4.0f} {:>3.0f} {:>3.0f} {: >7s} {:>7.6n} {:>3} \n'.format(h, k, l,
-                                                                                                     plusString,
-                                                                                                     plussigma, flag))
+                self.dataString.append('{:>4.0f}{:>4.0f}{:>4.0f} {: >7s} {:>7.5n} {:>3} \n'.format(h, k, l, plusString,
+                                                                                                   plussigma, flag))
             if minusString:
                 if len(minusString) > 7:
                     minusString = minusString[:7]
-                self.dataString.append('{:>4.0f} {:>3.0f} {:>3.0f} {: >7s} {:>7.6n} {:>3} \n'.format(hminus, kminus,
-                                                                                                     lminus,
-                                                                                                     minusString,
-                                                                                                     minussigma, flag))
+                self.dataString.append('{:>4.0f}{:>4.0f}{:>4.0f} {: >7s} {:>7.5n} {:>3} \n'.format(hminus, kminus,
+                                                                                                   lminus, minusString,
+                                                                                                   minussigma, flag))
             # print '{: >7s}'.format(plusString), '{: >7s}'.format(minusString)
         else:
             noFlack = False
@@ -981,6 +996,7 @@ class Data(object):
                 measString = '{: >7.6n}'.format(meas)
             if len(measString) > 7:
                 measString = measString[:7]
+            # print h, k, l, measString
             # try:
             #     flag = dataline[self.findFlack()[2]]
             # except IndexError:
@@ -988,7 +1004,7 @@ class Data(object):
             # except TypeError:
             #     noFlack = True
             if noFlack:
-                self.dataString.append('{:>4} {:>3} {:>3} {: >7s} {:>7.6n} \n'.format(h, k, l, measString, meassigma))
+                self.dataString.append('{:>4}{:>4}{:>4} {: >7s} {:>7.5n} \n'.format(h, k, l, measString, meassigma))
                 # if meas > 999999:
                 # elif int(meas) < 0:
                 #     self.dataString.append('{:>4} {:>3} {:>3} {:>-6.5n} {:>7.6n} \n'.format(h, k, l, meas, meassigma))
@@ -997,7 +1013,7 @@ class Data(object):
                 # # self.dataString.append('{:>4} {:>3} {:>3} {:>7f} {:>7f} \n'.format(h, k, l, meas, meassigma))
             if not noFlack:
                 # if meas > 999999:
-                self.dataString.append('{:>4} {:>3} {:>3} {: >7s} {:>7.6n} {:>3} \n'.format(h, k, l, measString,
+                self.dataString.append('{:>4}{:>4}{:>4} {: >7s} {:>7.5n} {:>3} \n'.format(h, k, l, measString,
                                                                                                  meassigma, flag))
                 # elif int(meas) < 0:
                 #     self.dataString.append('{:>4} {:>3} {:>3} {:>-6.5n} {:>7.6n} {:>3} \n'.format(h, k, l, meas,

@@ -1,13 +1,13 @@
 head = """
     ########################################################################
     #                              PDB2INS                                 #
-    #                  by Anna V. Luebben (Linux_x86_64@2016-10-24)        #
+    #                  by Anna V. Luebben (Linux_x86_64@2017-02-23)        #
     ########################################################################
 
     Reads a PDB file and generates an .ins file for SHELXL.
     The PDB file is assumed to conform to the Protein Data Bank notes
     'Atomic Coordinate and Bibliographic Entry Format Description Version
-    3.30'.
+    3.30'. For remarks and problems please contact aluebbe@gwdg.de.
 
     Usage:
         pdb2ins <filename|@pdbcode> [options]
