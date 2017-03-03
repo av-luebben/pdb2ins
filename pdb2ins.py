@@ -290,28 +290,28 @@ class Data(object):
         """
         useAnisou = True
         alreadyasked = False
-        try:
-            for line in self.IO.dataf:
-                if line[0] == "#":
-                    continue
-                if line[:6] == 'EXPDTA':
-                    self.isCrystData(line)
-                if line[:6] == "ATOM  " or line[:6] == "HETATM":
-                    self.atomContainer.extractAtom(line)
-                if line[:6] == "HET   ":
-                    self.atomContainer.extractHetRecord(line)
-                if line[:6] == "ANISOU" and useAnisou:
-                    if not alreadyasked:
-                        useAnisou = self.askAnisou()
-                        alreadyasked = True
-                    if useAnisou:
-                        self.atomContainer.extractAtomAnisou(line)
-                else:
-                    self.header.interpretLine(line)
-        except TypeError:
-            # print line
-            print '\nERROR: File is not a PDB file.\n *** PDB2INS is terminated without writing an .ins file. ***'
-            exit()
+        # try:
+        for line in self.IO.dataf:
+            if line[0] == "#":
+                continue
+            if line[:6] == 'EXPDTA':
+                self.isCrystData(line)
+            if line[:6] == "ATOM  " or line[:6] == "HETATM":
+                self.atomContainer.extractAtom(line)
+            if line[:6] == "HET   ":
+                self.atomContainer.extractHetRecord(line)
+            if line[:6] == "ANISOU" and useAnisou:
+                if not alreadyasked:
+                    useAnisou = self.askAnisou()
+                    alreadyasked = True
+                if useAnisou:
+                    self.atomContainer.extractAtomAnisou(line)
+            else:
+                self.header.interpretLine(line)
+        # except TypeError:
+        #     print line
+        #     print '\nERROR: File is not a PDB file.\n *** PDB2INS is terminated without writing an .ins file. ***'
+        #     exit()
 
     def printWarnings(self):
         """
@@ -319,13 +319,15 @@ class Data(object):
         once. Therefore this function is called after reading all lines and prints the messages.
         :return:
         """
-        if self.atomContainer.negResiNumber:
-            print '\n*** WARNING: Negative residue numbers found in file. SHELXL might not be able to handle.***\n'
+        # if self.atomContainer.negResiNumber:
+        #     print '\n*** WARNING: Negative residue numbers found in file. SHELXL might not be able to handle.***\n'
         if self.atomContainer.overlongResiNum:
             print '\n*** WARNING: One or more residues have a residue number larger than 10 000. Please check!***\n'
         if self.atomContainer.wrongResiName:
             print '\n*** Warning: The files contain residue names starting with a number. \n' \
-                  '    SHELXL can only handle residues names starting with a letter.\n'
+                  '    Older SHELXL versions can only handle residues names starting with a letter.\n'
+        if self.atomContainer.waterOffsetWarning:
+            print '\nINFO: Water residue numbers were changed to handle residues with insertion codes.\n'
 
     def dealWithHAtoms(self):
         """
@@ -498,6 +500,12 @@ class Data(object):
         self.strings.append("\n")
         self.strings.append(self.buildInstructions())
         self.strings.append("\n")
+        if self.atomContainer.insertionCodeString:
+            self.strings.append('REM Instructions for residues with insertion code.\n')
+            self.strings.append("\n")
+            for i in self.atomContainer.insertionCodeString:
+                self.strings.append(i + '\n')
+            self.strings.append("\n")
         self.atomContainer.findSSBonds()
         if self.atomContainer.ssBonds:
             self.strings.append("REM Instructions for disulfide-bridges:\n")
@@ -1228,7 +1236,7 @@ class Header(object):
                                   'LIST 6', 'WPDB 2 \n']
         self.generalRefinement2 = {'C': '$C_*', 'N': '$N_*', 'O': '$O_*', 'S': '$S_*', 'P': '$P_*'}
         self.generalRefinement2Order = ['C', 'N', 'O', 'S', 'P']
-        self.generalRefinement3 = ['REM BUMP', 'SWAT \n',
+        self.generalRefinement3 = ['XNPD 0.001 \n', 'REM BUMP', 'SWAT \n',
                                    'REM Remove MERG 4 instruction if Friedel opposites should not be merged.',
                                    'MERG 4 \n',
                                    'REM MORE 0 would reduce output if not required for diagnostic purposes. \n']
@@ -1366,7 +1374,7 @@ class AtomContainer(object):
         # self.overlongChainList = []
         # self.printWarning = True
         # self.overlongResiSeqNumbers = {}
-        self.chainIDold = None
+        self.chainIDbefore = None
         # self.resicounter2 = None
         self.resiNumberBefore = None
         self.resiNameBefore = None
@@ -1381,13 +1389,17 @@ class AtomContainer(object):
         self.insertionCodeDict = {}
         self.insCodeOccCounter = 0
         self.resiTuple = ()
-        self.insertionCodeBefore = None
+        # self.insertionCodeBefore = None
+        self.insertionCodeBefore = False
+        self.insertionCodeString = []
         self.resiNameDict = {}
         # self.waterCounter = 0
         self.negResiNumber = False
         self.overlongResiNum = False
         self.wrongResiName = False
         self.altLocDict = {}
+        self.wateroffset = None
+        self.waterOffsetWarning = False
 
     def extractAtom(self, line):
         """
@@ -1415,26 +1427,29 @@ class AtomContainer(object):
         self.chainIDSet.add(newAtom.getChainID())
         atomName = newAtom.getAtomName()
         self.atomDict[atomName] = newAtom
-        newChainID = newAtom.getChainID()  # This line must be removed when chainIDs are renumbered with code below.
+        chainIDnew = newAtom.getChainID()  # This line must be removed when chainIDs are renumbered with code below.
 
         # This part renumbers the chainIDs in sequence, relict from shelxl version with only large letter chainIDs
         # chainID = newAtom.getChainID()
-        # newChainID = self.getChainID(chainID)
-        # # print chainID, newChainID
-        # newAtom.setChainID(newChainID)
+        # chainIDnew = self.getChainID(chainID)
+        # # print chainID, chainIDnew
+        # newAtom.setChainID(chainIDnew)
 
         resiNumber = newAtom.getResiSeqNum().strip()
         resiSeqOffset = None
         # here residue names not starting with a letter are renamed
         resiName = newAtom.getResidueName().strip()
-        # print newChainID, resiNumber, resiName
+        # print chainIDnew, resiNumber, resiName
 
         # the following part handles residue names starting with a number
-        if resiName:
-            if not resiName[0].isalpha():
-                self.changeResiName(resiName)
-                # resiNameNew = self.changeResiName(resiName)
-        else:
+        # if resiName:
+        #     if not resiName[0].isalpha():
+        #         self.changeResiName(resiName)
+        #         # resiNameNew = self.changeResiName(resiName)
+        # else:
+        #     print ' *** ERROR: The file has not the expected format. Data type: residue name is missing. ***'
+        #     exit()
+        if not resiName or not chainIDnew:
             print ' *** ERROR: The file has not the expected format. Data type: residue name is missing. ***'
             exit()
 
@@ -1474,7 +1489,7 @@ class AtomContainer(object):
         #     self.resiNumberDict[chainID].append(resiNumber)
         # except KeyError:
         #     self.resiNumberDict[chainID] = resiNumber
-        if newChainID != self.chainIDold:
+        if chainIDnew != self.chainIDbefore:
             self.insCodeOccCounter = 0
             self.resiOffset = 0
         resiNumber = int(resiNumber)
@@ -1484,29 +1499,38 @@ class AtomContainer(object):
         if insertionCode:
             resiNumberNew = self.handleInsertionCode(insertionCode, resiNumber, resiNumberNew)
         newAtom.setResiSeqNum(resiNumberNew)  # it is very important to set the new value for the variable in the object
+        resiNumber = int(newAtom.getResiSeqNum())
+        # print 'insertion code handled'
+
+        # all residues with insertion code need restraints to bind them to their nearest residue
+        if resiNumberNew != self.resiNumberBefore and not resiName == 'HOH':
+            if (not insertionCode and self.insertionCodeBefore) or insertionCode:
+                self.insertionCodeRestraints(self.chainIDbefore, self.resiNumberBefore, chainIDnew, resiNumberNew)
+        # print 'insertion Code restraints'
+
         # insertionCodeOffset = 0
         # j = 0
         # if insertionCode:
-        #     # print resiNumber, newChainID, self.insertionCodeDict
+        #     # print resiNumber, chainIDnew, self.insertionCodeDict
         #     # if not resiNumber == self.resiNumberBefore:
         #         # print 'residue number changed, has insertion code'
         #     try:
-        #         insertionCodeOffset = self.insertionCodeDict[newChainID]
+        #         insertionCodeOffset = self.insertionCodeDict[chainIDnew]
         #     except KeyError:
-        #         self.insertionCodeDict[newChainID] = 0
+        #         self.insertionCodeDict[chainIDnew] = 0
         #     if resiNumber == self.resiNumberBefore:
         #         # if insertionCode:
-        #         print "Found Residue insertion code.", newChainID, resiNumber, resiName
+        #         print "Found Residue insertion code.", chainIDnew, resiNumber, resiName
         #         if not insertionCode == self.insertionCodeBefore or not self.resiNameBefore == resiName:
         #             # if not self.resiNumberBefore:
         #             # print 'the offset was changed here, 1'
-        #             self.insertionCodeDict[newChainID] += 1
+        #             self.insertionCodeDict[chainIDnew] += 1
         #             self.resiOffset += 1
         #             changedoffset = True
         #             self.insertionCodeBefore = insertionCode
         #         # elif not resiName == self.resiNameBefore:
         #         #     # print 'the offset was changed here, 2'
-        #         #     self.insertionCodeDict[newChainID] += 1
+        #         #     self.insertionCodeDict[chainIDnew] += 1
         #         #     self.resiOffset += 1
         #         #     changedoffset = True
         #         #     self.insertionCodeBefore = insertionCode
@@ -1539,7 +1563,7 @@ class AtomContainer(object):
         #         else:  # i have no idea when this part should happen
         #             self.insCodeOccCounter += 1
         #         # print 'yyy', resiNumber, self.resiNumberBefore, self.insCodeOccCounter
-        # if newChainID != self.chainIDold:  # new chain id means the insCodeOccCounter should be reset
+        # if chainIDnew != self.chainIDold:  # new chain id means the insCodeOccCounter should be reset
         #     self.insCodeOccCounter = 0
         # # print self.insCodeOccCounter, resiNumber, self.resiNumberBefore
         # if not insertionCode and self.insertionCodeBefore:  # change from insertion code to no ins code, same chain
@@ -1547,19 +1571,19 @@ class AtomContainer(object):
         #         self.insCodeOccCounter += 1
         #     try:
         #         # self.insCodeOccCounter += 1
-        #         self.insertionCodeDict[newChainID] += self.insCodeOccCounter
+        #         self.insertionCodeDict[chainIDnew] += self.insCodeOccCounter
         #         self.insCodeOccCounter = 0
         #     except KeyError:
-        #         self.insertionCodeDict[newChainID] = 0
+        #         self.insertionCodeDict[chainIDnew] = 0
         # if not insertionCode == self.insertionCodeBefore:  # change between different insertions codes in one chain
         #     try:
-        #         self.insertionCodeDict[newChainID] += self.insCodeOccCounter
+        #         self.insertionCodeDict[chainIDnew] += self.insCodeOccCounter
         #         self.insCodeOccCounter = 0
         #     except KeyError:
-        #         self.insertionCodeDict[newChainID] = self.insCodeOccCounter
+        #         self.insertionCodeDict[chainIDnew] = self.insCodeOccCounter
         #         self.insCodeOccCounter = 0
         #     self.resiOffset += 1
-        #     self.insertionCodeDict[newChainID] += 1
+        #     self.insertionCodeDict[chainIDnew] += 1
         #     changedoffset = True
         #     self.insertionCodeBefore = insertionCode
         # elif not self.resiNameBefore or not self.resiNumberBefore:
@@ -1588,8 +1612,8 @@ class AtomContainer(object):
         # print 'I changed the resiNumber of a water residue. ', resiNumberNew
         # try:
         #     #newAtom.setResiSeqNum(int(''.join([c for c in resiNumber if c.isdigit()])) +
-        #                                       self.insertionCodeDict[newChainID])
-        #     newAtom.setResiSeqNum(int(resiNumber) + self.insertionCodeDict[newChainID])
+        #                                       self.insertionCodeDict[chainIDnew])
+        #     newAtom.setResiSeqNum(int(resiNumber) + self.insertionCodeDict[chainIDnew])
         # except KeyError:
         #     newAtom.setResiSeqNum(int(''.join([c for c in resiNumber if c.isdigit()])) + self.resiOffset)
         #     print (int(''.join([c for c in resiNumber if c.isdigit()])) + self.resiOffset)
@@ -1597,44 +1621,81 @@ class AtomContainer(object):
 
         # if not self.chainIDold:
         #     self.resicounter2 = 1
-        # if newChainID == self.chainIDold:
+        # if chainIDnew == self.chainIDold:
         #     if resiNumber == self.resiNumberBefore:
         #         pass
         #     else:
         #         self.resicounter2 += 1
         # print chainID, resiNumberNew, newAtom.getAltLoc(), insertionCode
+        # print self.insCodeOccCounter, resiNumberNew
+
+        # at this part water residues are renumbered if their numbers would collide with the insertion code offset
+        if self.insCodeOccCounter and int(resiNumberNew) >= 1000:
+            if resiName == 'HOH' and not self.wateroffset:
+                self.waterOffsetWarning = True
+                self.wateroffset = self.insCodeOccCounter + 1
+                newAtom.setResiSeqNum(resiNumberNew + self.wateroffset * 1000)
+                resiNumberNew = newAtom.getResiSeqNum()
+            elif resiName == 'HOH' and self.wateroffset:
+                self.waterOffsetWarning = True
+                newAtom.setResiSeqNum(resiNumberNew + self.wateroffset * 1000)
+                resiNumberNew = newAtom.getResiSeqNum()
+                pass
+            elif resiName != 'HOH':
+                pass
+            else:
+                print 'Error handling insertion codes encountering chains with more than 1000 residues.'
+                exit()
+
+        # the new atom is added to the chain and residue classes.
         try:
-            success = self.chains[newChainID][resiNumberNew].append(newAtom)
-            # print 'this was created: ', newChainID, resiNumberNew
+            # print 'i am in try', chainIDnew, resiNumberNew
+            success = self.chains[chainIDnew][resiNumberNew].append(newAtom)
+            # print 'this was created: ', chainIDnew, resiNumberNew, success
             if not success:
+                # print 'not success'
                 if newAtom.getAltLoc():
-                    success = self.chains[newChainID][resiNumberNew].append(newAtom, True)
+                    success = self.chains[chainIDnew][resiNumberNew].append(newAtom, True)
+                    # print 'new success', success
                     if not success:
-                        print '\nERROR: Problem while handling insertion codes starting with residue: ', newChainID, \
-                            ':', resiNumber
+                        print '\nERROR: Problem while handling insertion codes starting with residue: ', chainIDnew, \
+                            ':', resiNumber, resiName
                         exit()
                 else:
+                    # print 'else'
                     self.resiOffset += 1
                     resiNumberNew = self.resiOffset + resiNumber
+                    # print resiNumber, resiNumberNew
                     newAtom.setResiSeqNum(resiNumberNew)  # never forget to set the new residue number for the object!!!
-                    success = self.chains[newChainID][resiNumberNew].append(newAtom)
-                    # print 'No, this was created: ', newChainID, resiNumberNew
+                    # print 'bla', chainIDnew, resiNumberNew, newAtom, self.chains
+                    success = self.chains[chainIDnew][resiNumberNew].append(newAtom)
+                    # print 'No, this was created: ', chainIDnew, resiNumberNew
                     if not success:
-                        print '\nERROR: Problem while handling insertion codes starting with residue: ', newChainID, \
-                            ':', resiNumber
+                        # print line
+                        # for key, value in self.chains.items():
+                        #     print key, value
+                        #     for i, j in value.items():
+                        #         print i, j.getResiName(), j.getResiSeqNum()
+                        print '\nERROR: Problem while handling insertion codes starting with residue: ', chainIDnew, \
+                            ':', resiNumber, resiName
                         exit()
         except NoResidueError:  # creates the residue if it was not there before, happens with first atom of new residue
-            self.chains[newChainID][resiNumberNew] = Residue([newAtom])
-            # print 'No, no: This was created: ', newChainID, resiNumberNew
+            self.chains[chainIDnew][resiNumberNew] = Residue([newAtom])
+            # print 'No, no: This was created: ', chainIDnew, resiNumberNew
         except KeyError:  # creates a new chain and new residue object
             newChain = Chain()
-            self.chains[newChainID] = newChain
+            self.chains[chainIDnew] = newChain
             newChain[resiNumberNew] = Residue([newAtom])
-            # print 'You are all wrong, this was created: ', newChainID, resiNumberNew
-        self.chainIDold = newChainID
-        self.insertionCodeBefore = insertionCode
+            # print 'You are all wrong, this was created: ', chainIDnew, resiNumberNew
+        # self.insertionCodeBefore = insertionCode
+        if insertionCode:
+            self.insertionCodeBefore = True
+        else:
+            self.insertionCodeBefore = False
         self.resiNumberBefore = resiNumberNew
         self.resiNameBefore = resiName
+        self.chainIDbefore = chainIDnew
+        # print 'finished create atom'
 
     def changeResiName(self, resiName):
         """
@@ -1668,7 +1729,8 @@ class AtomContainer(object):
     def handleInsertionCode(self, insertionCode, resiNumber, resiNumberNew):
         """
         All atoms with an insertion code are handled here. The residue with the insertion code gets an offset. If the
-        residue number becomes larger than 10000, a warning is printed.
+        residue number becomes larger than 10000, a warning is printed. The insCodeOccCounter is needed for the water
+        residue offset, should water residues collide with the new insertion code offset.
         :param insertionCode:
         :param resiNumber:
         :param resiNumberNew:
@@ -1677,6 +1739,7 @@ class AtomContainer(object):
         try:
             a = self.insertionCodeDict[insertionCode]
         except KeyError:
+            self.insCodeOccCounter += 1
             #  print len(self.insertionCodeDict)
             if len(self.insertionCodeDict) >= 9:  # offset should not be larger than 9000
                 a = 9000 + (len(self.insertionCodeDict) - 8) * 100
@@ -1692,6 +1755,29 @@ class AtomContainer(object):
         else:
             resiNumberNew = a + resiNumber
         return resiNumberNew
+
+    def insertionCodeRestraints(self, chainIDbefore, resiNumberbefore, chainIDnew, resiNumberNew):
+        """
+        All inserted residues have to get the appropriate DFIX, DANG and FLAT restraints, since the general one's only
+        work for residues with consecutive numbers.
+        :param chainIDbefore:
+        :param resiNumberbefore:
+        :param chainIDnew:
+        :param resiNumberNew:
+        :return:
+        """
+        # print chainIDbefore, chainIDnew, resiNumberbefore, resiNumberNew
+        self.insertionCodeString.append('DFIX 1.329 C_{}:{} N_{}:{}'.format(chainIDbefore, resiNumberbefore, chainIDnew,
+                                                                            resiNumberNew))
+        self.insertionCodeString.append('DANG 2.425 CA_{}:{} N_{}:{}'.format(chainIDbefore, resiNumberbefore,
+                                                                             chainIDnew, resiNumberNew))
+        self.insertionCodeString.append('DANG 2.250 O_{}:{} N_{}:{}'.format(chainIDbefore, resiNumberbefore, chainIDnew,
+                                                                            resiNumberNew))
+        self.insertionCodeString.append('DANG 2.435 C_{}:{} CA_{}:{}'.format(chainIDbefore, resiNumberbefore,
+                                                                             chainIDnew, resiNumberNew))
+        self.insertionCodeString.append('FLAT 2.0 O_{a}:{b} N_{c}:{d} '
+                                        'C_{a}:{b} CA_{c}:{d}'.format(a=chainIDbefore, b=resiNumberbefore, c=chainIDnew,
+                                                                      d=resiNumberNew))
 
     def getChainID(self, chainIDbefore):
         """
@@ -2020,7 +2106,7 @@ class AtomContainer(object):
                 altLoc2 = atom2.getAltLoc()
                 # print atom1.getAtomCoord(), atom2.getAtomCoord()
                 if self.getAtomDistance(atom1.getAtomCoord(), atom2.getAtomCoord()) < 2.5:
-                    self.ssBonds = True
+                    # self.ssBonds = True
                     chain1 = atom1.getChainID()
                     chain2 = atom2.getChainID()
                     num1 = atom1.getResiSeqNum()
@@ -2149,6 +2235,7 @@ class AtomContainer(object):
                                    .format(chain2, num2.strip(), altAltLoc1, chain1, num1.strip(), altAltLoc2))
             alreadyInBondList.append(atom1)
             alreadyInBondList.append(atom2)
+            self.ssBonds = True
         return alreadyInBondList
 
     def makeSSBonds(self, chain1, chain2, atom1, atom2, num1, num2, alreadyInBondList):
@@ -2161,6 +2248,7 @@ class AtomContainer(object):
                                    .format(chain2, float(num2), chain1, float(num1), padding))
             alreadyInBondList.append(atom1)
             alreadyInBondList.append(atom2)
+            self.ssBonds = True
         return alreadyInBondList
 
     def asShelxString(self, cell):
@@ -2751,7 +2839,7 @@ class Chain(dict):
         """
         # self.finalize()
         for resiNumber, residue in reversed(self.iterate()):
-            if residue.isAminoAcid():
+            if residue.isAminoAcid() and not residue.hasInsertionCode():
                 return residue
 
     def getChainLength(self):
@@ -2895,6 +2983,24 @@ class Residue(list):
             return makeHFixfor
         else:
             return []
+
+    def getResiName(self):
+        return self[0].getResidueName()
+
+    def getResiSeqNum(self):
+        return self[0].getResiSeqNum()
+
+    def hasInsertionCode(self):
+        """
+        Checks if the residue has an insertion code an therefore could have the highest residue number because of the
+        applied offset.
+        :return:
+        """
+        insertionCode = self[0].getInsertionCode()
+        if not insertionCode:
+            return False
+        else:
+            return True
 
     def isAminoAcid(self):
         """

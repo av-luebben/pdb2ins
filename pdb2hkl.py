@@ -893,6 +893,10 @@ class Data(object):
                     plusString = '{: >-6.4n}'.format(plus)
                 else:
                     plusString = '{: >7.5n}'.format(plus)
+            if len(str(plussigma).strip()) > 8:
+                plussigma = float(str(plussigma)[:8])
+            if len(str(minussigma).strip()) > 8:
+                minussigma = float(str(minussigma)[:8])
                 # self.dataString.append('{:>4.0f} {:>3.0f} {:>3.0f} {: >7.7n} {:>7.6n} {:>3} \n'.format(h, k, l, minus, minussigma,
                 #                                                                          int(-1)))
                 # self.dataString.append('{:>4.0f} {:>3.0f} {:>3.0f} {: >7.6n} {:>7.6n} {:>3} \n'.format(h, k, l, plus, plussigma,
@@ -931,14 +935,14 @@ class Data(object):
                 flag = 1
             # print flack
             if plusString:
-                if len(plusString) > 7:
-                    plusString = plusString[:7]
-                self.dataString.append('{:>4.0f}{:>4.0f}{:>4.0f} {: >7s} {:>7.5n} {:>3} \n'.format(h, k, l, plusString,
+                if len(plusString) > 8:
+                    plusString = plusString[:8]
+                self.dataString.append('{:>4.0f}{:>4.0f}{:>4.0f}{:> 8s}{:> 8n}{:>4} \n'.format(h, k, l, plusString,
                                                                                                    plussigma, flag))
             if minusString:
-                if len(minusString) > 7:
-                    minusString = minusString[:7]
-                self.dataString.append('{:>4.0f}{:>4.0f}{:>4.0f} {: >7s} {:>7.5n} {:>3} \n'.format(hminus, kminus,
+                if len(minusString) > 8:
+                    minusString = minusString[:8]
+                self.dataString.append('{:>4.0f}{:>4.0f}{:>4.0f}{:> 8s}{:> 8n}{:>4} \n'.format(hminus, kminus,
                                                                                                    lminus, minusString,
                                                                                                    minussigma, flag))
             # print '{: >7s}'.format(plusString), '{: >7s}'.format(minusString)
@@ -988,15 +992,23 @@ class Data(object):
             # except ValueError:
             #     print 'File format could not be read.'
             #     exit()
-            if meas > 999999:
-                measString = '{: >7.7n}'.format(meas)
-            elif meas > 0:
-                measString = '{: >-6.4n}'.format(meas)
-            else:
-                measString = '{: >7.6n}'.format(meas)
-            if len(measString) > 7:
-                measString = measString[:7]
-            # print h, k, l, measString
+
+            # if meas > 999999:
+            #     measString = '{: >7.7n}'.format(meas)
+            # elif meas > 0:
+            #     measString = '{: >-6.4n}'.format(meas)
+            # else:
+            #     measString = '{: >7.6n}'.format(meas)
+            # if len(measString) > 7:
+            #     measString = measString[:7]
+            if len(str(meas).strip()) > 8:
+                meas = float(str(meas)[:8])
+            if len(str(meassigma).strip()) > 8:
+                meassigma = float(str(meassigma)[:8])
+            # print meas, type(meas), meassigma, type(meassigma)
+
+            # print h, k, l, meas
+            # print '{:> 8.5n} {:> 8.5g} {:> 8n}'.format(meas, meas, meas)
             # try:
             #     flag = dataline[self.findFlack()[2]]
             # except IndexError:
@@ -1004,7 +1016,7 @@ class Data(object):
             # except TypeError:
             #     noFlack = True
             if noFlack:
-                self.dataString.append('{:>4}{:>4}{:>4} {: >7s} {:>7.5n} \n'.format(h, k, l, measString, meassigma))
+                self.dataString.append('{:>4}{:>4}{:>4}{:> 8n}{:> 8n} \n'.format(h, k, l, meas, meassigma))
                 # if meas > 999999:
                 # elif int(meas) < 0:
                 #     self.dataString.append('{:>4} {:>3} {:>3} {:>-6.5n} {:>7.6n} \n'.format(h, k, l, meas, meassigma))
@@ -1013,8 +1025,9 @@ class Data(object):
                 # # self.dataString.append('{:>4} {:>3} {:>3} {:>7f} {:>7f} \n'.format(h, k, l, meas, meassigma))
             if not noFlack:
                 # if meas > 999999:
-                self.dataString.append('{:>4}{:>4}{:>4} {: >7s} {:>7.5n} {:>3} \n'.format(h, k, l, measString,
-                                                                                                 meassigma, flag))
+                # print meas, type(meas), meassigma, type(meassigma)
+                self.dataString.append('{:>4}{:>4}{:>4}{:> 8n}{:> 8n}{:> 4} \n'.format(h, k, l, meas, meassigma,
+                                                                                           flag))
                 # elif int(meas) < 0:
                 #     self.dataString.append('{:>4} {:>3} {:>3} {:>-6.5n} {:>7.6n} {:>3} \n'.format(h, k, l, meas,
                 #                                                                                   meassigma, flack))
@@ -1058,7 +1071,7 @@ def run(forceOptions=None):
     """
     ########################################################################
     #                                 PDB2HKL                              #
-    #                     by Anna V. Luebben (Version 2015/2)              #
+    #                     by Anna V. Luebben (Version 2017/1)              #
     ########################################################################
 
     Reads a pdb (.cif) file and generates a .hkl file for SHELXL.
