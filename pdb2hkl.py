@@ -937,12 +937,12 @@ class Data(object):
             if plusString:
                 if len(plusString) > 8:
                     plusString = plusString[:8]
-                self.dataString.append('{:>4.0f}{:>4.0f}{:>4.0f}{:> 8s}{:> 8n}{:>4} \n'.format(h, k, l, plusString,
+                self.dataString.append('{:>4.0f}{:>4.0f}{:>4.0f}{: >8s}{:> 8n}{:>4} \n'.format(h, k, l, plusString,
                                                                                                    plussigma, flag))
             if minusString:
                 if len(minusString) > 8:
                     minusString = minusString[:8]
-                self.dataString.append('{:>4.0f}{:>4.0f}{:>4.0f}{:> 8s}{:> 8n}{:>4} \n'.format(hminus, kminus,
+                self.dataString.append('{:>4.0f}{:>4.0f}{:>4.0f}{: >8s}{:> 8n}{:>4} \n'.format(hminus, kminus,
                                                                                                    lminus, minusString,
                                                                                                    minussigma, flag))
             # print '{: >7s}'.format(plusString), '{: >7s}'.format(minusString)

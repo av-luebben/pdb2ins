@@ -1505,7 +1505,15 @@ class AtomContainer(object):
         # all residues with insertion code need restraints to bind them to their nearest residue
         if resiNumberNew != self.resiNumberBefore and not resiName == 'HOH':
             if (not insertionCode and self.insertionCodeBefore) or insertionCode:
-                self.insertionCodeRestraints(self.chainIDbefore, self.resiNumberBefore, chainIDnew, resiNumberNew)
+                try:
+                    delta = int(resiNumberNew)-int(self.resiNumberBefore)
+                    # print delta, chainIDnew, resiNumberNew, self.chainIDbefore, self.resiNumberBefore
+                    if abs(delta) >= 20 and self.chainIDbefore == chainIDnew:
+                        self.insertionCodeRestraints(self.chainIDbefore, self.resiNumberBefore, chainIDnew,
+                                                     resiNumberNew)
+                except TypeError:
+                    pass
+
         # print 'insertion Code restraints'
 
         # insertionCodeOffset = 0
@@ -2158,7 +2166,10 @@ class AtomContainer(object):
         # altLoc1 = str(altLoc1)
         # altLoc2 = str(altLoc2)
         try:
-            altAltLoc1 = self.altLocDict[altLoc1]
+            if altLoc1:
+                altAltLoc1 = self.altLocDict[altLoc1]
+            else:
+                altAltLoc1 = None
         except KeyError:
             try:
                 altLoc1 = int(altLoc1)
@@ -2174,7 +2185,10 @@ class AtomContainer(object):
                     altAltLoc1 = altLoc1
                     self.altLocDict[altLoc1] = altAltLoc1  # here the altAltLoc and altLoc are the same, but no KeyError
         try:
-            altAltLoc2 = self.altLocDict[altLoc2]
+            if altLoc2:
+                altAltLoc2 = self.altLocDict[altLoc2]
+            else:
+                altAltLoc2 = None
         except KeyError:
             try:
                 altLoc2 = int(altLoc2)
@@ -2226,16 +2240,39 @@ class AtomContainer(object):
         #     else:
         #         print 'INFO: Problem handling alternate location code during creation of disulfide bond restraints.'
         #         self.makeSSBonds(chain1, chain2, atom1, atom2, num1, num2, alreadyInBondList)
-        if atom1 not in alreadyInBondList and atom2 not in alreadyInBondList:
-            self.ssBondList.append('\nDFIX 2.031 SG_{}:{}^{} SG_{}:{}^{}'
-                                   .format(chain1, num1.strip(), altAltLoc1, chain2, num2.strip(), altAltLoc2))
-            self.ssBondList.append('\nDANG 3.035 SG_{}:{}^{} CB_{}:{}^{}'
-                                   .format(chain1, num1.strip(), altAltLoc1, chain2, num2.strip(), altAltLoc2))
-            self.ssBondList.append('\nDANG 3.035 SG_{}:{}^{} CB_{}:{}^{}'
-                                   .format(chain2, num2.strip(), altAltLoc1, chain1, num1.strip(), altAltLoc2))
-            alreadyInBondList.append(atom1)
-            alreadyInBondList.append(atom2)
-            self.ssBonds = True
+        if altAltLoc1 and altAltLoc2:
+            if atom1 not in alreadyInBondList and atom2 not in alreadyInBondList:
+                self.ssBondList.append('\nDFIX 2.031 SG_{}:{}^{} SG_{}:{}^{}'
+                                       .format(chain1, num1.strip(), altAltLoc1, chain2, num2.strip(), altAltLoc2))
+                self.ssBondList.append('\nDANG 3.035 SG_{}:{}^{} CB_{}:{}^{}'
+                                       .format(chain1, num1.strip(), altAltLoc1, chain2, num2.strip(), altAltLoc2))
+                self.ssBondList.append('\nDANG 3.035 SG_{}:{}^{} CB_{}:{}^{}'
+                                       .format(chain2, num2.strip(), altAltLoc1, chain1, num1.strip(), altAltLoc2))
+                alreadyInBondList.append(atom1)
+                alreadyInBondList.append(atom2)
+                self.ssBonds = True
+        elif altAltLoc1 and not altAltLoc2:
+            if atom1 not in alreadyInBondList and atom2 not in alreadyInBondList:
+                self.ssBondList.append('\nDFIX 2.031 SG_{}:{}^{} SG_{}:{}'
+                                       .format(chain1, num1.strip(), altAltLoc1, chain2, num2.strip()))
+                self.ssBondList.append('\nDANG 3.035 SG_{}:{}^{} CB_{}:{}'
+                                       .format(chain1, num1.strip(), altAltLoc1, chain2, num2.strip()))
+                self.ssBondList.append('\nDANG 3.035 SG_{}:{}^{} CB_{}:{}'
+                                       .format(chain2, num2.strip(), altAltLoc1, chain1, num1.strip()))
+                alreadyInBondList.append(atom1)
+                alreadyInBondList.append(atom2)
+                self.ssBonds = True
+        elif not altAltLoc1 and altAltLoc2:
+            if atom1 not in alreadyInBondList and atom2 not in alreadyInBondList:
+                self.ssBondList.append('\nDFIX 2.031 SG_{}:{} SG_{}:{}'
+                                       .format(chain1, num1.strip(), chain2, num2.strip()))
+                self.ssBondList.append('\nDANG 3.035 SG_{}:{} CB_{}:{}'
+                                       .format(chain1, num1.strip(), chain2, num2.strip()))
+                self.ssBondList.append('\nDANG 3.035 SG_{}:{} CB_{}:{}'
+                                       .format(chain2, num2.strip(), chain1, num1.strip()))
+                alreadyInBondList.append(atom1)
+                alreadyInBondList.append(atom2)
+                self.ssBonds = True
         return alreadyInBondList
 
     def makeSSBonds(self, chain1, chain2, atom1, atom2, num1, num2, alreadyInBondList):
