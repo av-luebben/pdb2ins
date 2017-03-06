@@ -1001,10 +1001,23 @@ class Data(object):
             #     measString = '{: >7.6n}'.format(meas)
             # if len(measString) > 7:
             #     measString = measString[:7]
-            if len(str(meas).strip()) > 8:
-                meas = float(str(meas)[:8])
-            if len(str(meassigma).strip()) > 8:
-                meassigma = float(str(meassigma)[:8])
+            if 'e' not in str(meas):
+                if len(str(meas).strip()) >= 8:
+                    if str(meas).startswith('0'):
+                        meas = float(str(meas)[:7])
+                        print meas
+                    else:
+                        meas = float(str(meas)[:8])
+                if len(str(meassigma).strip()) >= 8:
+                    if str(meassigma).startswith('0'):
+                        meassigma = float(str(meassigma)[:7])
+                        print meassigma
+                    else:
+                        meassigma = float(str(meassigma)[:8])
+            else:  # due to scientific notation, small numbers get an exponential number starting with e-5.
+                x = '{:f}'.format(meas)
+                print meas, x
+                meas = float(x[:7])
             # print meas, type(meas), meassigma, type(meassigma)
 
             # print h, k, l, meas

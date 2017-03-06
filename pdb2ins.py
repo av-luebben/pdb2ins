@@ -328,6 +328,9 @@ class Data(object):
                   '    Older SHELXL versions can only handle residues names starting with a letter.\n'
         if self.atomContainer.waterOffsetWarning:
             print '\nINFO: Water residue numbers were changed to handle residues with insertion codes.\n'
+        if self.atomContainer.resiNUmberCollision:
+            print '*** Warning: The residues with a number larger than 1000 could collide with applied offset \n' \
+                  '    for insertion code residues. Please check!\n'
 
     def dealWithHAtoms(self):
         """
@@ -972,18 +975,23 @@ class Header(object):
         """
         doNotReplace1 = ['P 1', 'A 1', 'B 1', 'C 1', 'I 1', 'F 1']
         while True:
-            self.spaceGroup = raw_input("\nSpace group not found or incorrect in .pdb file. Space group given: {} \n"
+            answer = raw_input("\nSpace group not found or incorrect in .pdb file. Space group given: {} \n"
                                         "Please enter the correct space group:".format(self.getSpaceGroup()))
             # print self.spaceGroup.strip(), type(self.spaceGroup)
-            if self.spaceGroup.strip() not in doNotReplace1:
-                self.spaceGroup = self.spaceGroup.replace(' 1 ', '').lstrip()
-            if self.spaceGroup[1] == "R":
-                x = self.cell[6] - self.cell[5]
-                if x >= 20:
-                    self.spaceGroup[1] = "H"
-            self.abbreviateSpaceGroup()
-            if self.validateSpaceGroup(self.getAbbrSpaceGroup()):
-                break
+
+            if answer.strip() == '':
+                self.spaceGroup = self.getSpaceGroup()
+            else:
+                if answer.strip() not in doNotReplace1:
+                    self.spaceGroup = answer.replace(' 1 ', '').lstrip()
+                if answer[1] == "R":
+                    x = self.cell[6] - self.cell[5]
+                    if x >= 20:
+                        answer[1] = "H"
+                    self.spaceGroup = answer
+                self.abbreviateSpaceGroup()
+                if self.validateSpaceGroup(self.getAbbrSpaceGroup()):
+                    break
 
     def abbreviateSpaceGroup(self):
         """
@@ -1053,36 +1061,66 @@ class Header(object):
             try:
                 self.zValue = int(self.crystLine[66:70])
             except KeyError:
-                self.zValue = raw_input("\nPlease enter Z (number of molecules per cell):")
-                if not self.zValue:
-                    print ' *** Error: No valid Z value given. *** '
-                    self.zValue = None
+                print 'No Z value found in PDB file.'
+                self.zValue = self.askZvalue()
+                # self.zValue = raw_input("\nPlease enter Z (number of molecules per cell):")
+                # if not self.zValue:
+                #     print ' *** Error: No valid Z value given. *** '
+                #     self.zValue = None
             except ValueError:
-                self.zValue = raw_input("Please enter Z (number of molecules per cell):")
-                if not self.zValue:
-                    print ' *** Error: No valid Z value given. *** '
-                    self.zValue = None
-            if not options['i'] and not self.zValue:
-                newZ = raw_input("Please enter Z (number of molecules per cell) [{}]:".format(self.zValue))
-                if not newZ:
-                    pass
-                # if newZ in validZ:
-                else:
-                    self.zValue = int(newZ)
-            else:
-                pass
+                print 'No Z value was found in PDB file.'
+                self.zValue = self.askZvalue()
+            #     self.zValue = raw_input("Please enter Z (number of molecules per cell):")
+            #     if not self.zValue:
+            #         print ' *** Error: No valid Z value given. *** '
+            #         self.zValue = None
+            # if not options['i'] and not self.zValue:
+            #     newZ = raw_input("Please enter Z (number of molecules per cell) [{}]:".format(self.zValue))
+            #     if not newZ:
+            #         self.zValue = 1
+            #     # if newZ in validZ:
+            #     else:
+            #         self.zValue = int(newZ)
+            # else:
+            #     pass
         else:
             z = options['z']
             try:
                 self.zValue = int(z)
                 print 'INFO: Z value is set to {}'.format(z)
             except ValueError:
-                self.zValue = None
+                self.zValue = 1
+                print 'INFO: Z value was set to 1. Please check!'
             except TypeError:
-                self.zValue = None
+                self.zValue = 1
+                print 'INFO: Z value was set to 1. Please check!'
 
     def getZvalue(self):
         return int(self.zValue)
+
+    def askZvalue(self):
+        """
+        this function is called if no z value could be extracted from the pdb file. the function is called as long as no
+        z value has been specified.
+        :return:
+        """
+        if options['i']:
+            self.zValue = 1
+            print 'INFO: Z value was set to 1. Please check!'
+            return self.zValue
+        else:
+            while not self.zValue:
+                newZ = raw_input("\nPlease enter Z (number of molecules per cell):")
+                if not newZ:
+                    pass
+                else:
+                    try:
+                        self.zValue = int(newZ)
+                        return self.zValue
+                    except ValueError:
+                        pass
+                    except TypeError:
+                        pass
 
     def extractWavelength(self):
         """
@@ -1400,6 +1438,7 @@ class AtomContainer(object):
         self.altLocDict = {}
         self.wateroffset = None
         self.waterOffsetWarning = False
+        self.resiNUmberCollision = False
 
     def extractAtom(self, line):
         """
@@ -1449,9 +1488,19 @@ class AtomContainer(object):
         # else:
         #     print ' *** ERROR: The file has not the expected format. Data type: residue name is missing. ***'
         #     exit()
+
         if not resiName or not chainIDnew:
             print ' *** ERROR: The file has not the expected format. Data type: residue name is missing. ***'
             exit()
+
+        # the following part handles residue names consisting only of numbers
+        try:
+            x = int(resiName)
+            self.changeResiName(resiName)
+            resiName = newAtom.getResidueName()
+            # resiNameNew = self.changeResiName(resiName)
+        except ValueError:
+            pass
 
 
         # the following part handles negative residue seq numbers at the beginning of the chain
@@ -1650,7 +1699,7 @@ class AtomContainer(object):
                 resiNumberNew = newAtom.getResiSeqNum()
                 pass
             elif resiName != 'HOH':
-                pass
+                self.resiNUmberCollision = True
             else:
                 print 'Error handling insertion codes encountering chains with more than 1000 residues.'
                 exit()
@@ -1720,8 +1769,8 @@ class AtomContainer(object):
                 while True:
                     resiNameNew = raw_input('\n *** WARNING: The residue {} has a name SHELXL cannot handle! ***\n'
                                             '     You can rename the residue now or keep the original name.\n'
-                                            '     Please enter a new 3 digit residue name starting '
-                                            'with a letter [{}]: '.format(resiName, resiName))
+                                            '     Please enter a new 3 digit residue name containing '
+                                            'a letter [{}]: '.format(resiName, resiName))
                     if not resiNameNew:
                         resiNameNew = resiName
                     if len(resiName) <= 3:
@@ -2144,7 +2193,8 @@ class AtomContainer(object):
         for the .ins file. Numbers are kept to give the same number for the PART instruction referenced as given by
         altLocToRestraintDict for SSBONDS, letters are un-capitalized and taken for the SSBOND restraints and
         referenced for PART as before.
-
+        It is not checked if the atom 'CB' has an altloc code and this can lead to errors while running shelxl ('No
+        match for atom ... in ..').
         :param chain1:
         :param chain2:
         :param atom1:
@@ -2247,7 +2297,7 @@ class AtomContainer(object):
                 self.ssBondList.append('\nDANG 3.035 SG_{}:{}^{} CB_{}:{}^{}'
                                        .format(chain1, num1.strip(), altAltLoc1, chain2, num2.strip(), altAltLoc2))
                 self.ssBondList.append('\nDANG 3.035 SG_{}:{}^{} CB_{}:{}^{}'
-                                       .format(chain2, num2.strip(), altAltLoc1, chain1, num1.strip(), altAltLoc2))
+                                       .format(chain2, num2.strip(), altAltLoc2, chain1, num1.strip(), altAltLoc1))
                 alreadyInBondList.append(atom1)
                 alreadyInBondList.append(atom2)
                 self.ssBonds = True
@@ -2257,19 +2307,19 @@ class AtomContainer(object):
                                        .format(chain1, num1.strip(), altAltLoc1, chain2, num2.strip()))
                 self.ssBondList.append('\nDANG 3.035 SG_{}:{}^{} CB_{}:{}'
                                        .format(chain1, num1.strip(), altAltLoc1, chain2, num2.strip()))
-                self.ssBondList.append('\nDANG 3.035 SG_{}:{}^{} CB_{}:{}'
-                                       .format(chain2, num2.strip(), altAltLoc1, chain1, num1.strip()))
+                self.ssBondList.append('\nDANG 3.035 SG_{}:{} CB_{}:{}^{}'
+                                       .format(chain2, num2.strip(), chain1, num1.strip(), altAltLoc1))
                 alreadyInBondList.append(atom1)
                 alreadyInBondList.append(atom2)
                 self.ssBonds = True
         elif not altAltLoc1 and altAltLoc2:
             if atom1 not in alreadyInBondList and atom2 not in alreadyInBondList:
-                self.ssBondList.append('\nDFIX 2.031 SG_{}:{} SG_{}:{}'
-                                       .format(chain1, num1.strip(), chain2, num2.strip()))
-                self.ssBondList.append('\nDANG 3.035 SG_{}:{} CB_{}:{}'
-                                       .format(chain1, num1.strip(), chain2, num2.strip()))
-                self.ssBondList.append('\nDANG 3.035 SG_{}:{} CB_{}:{}'
-                                       .format(chain2, num2.strip(), chain1, num1.strip()))
+                self.ssBondList.append('\nDFIX 2.031 SG_{}:{} SG_{}:{}^{}'
+                                       .format(chain1, num1.strip(), chain2, num2.strip(), altAltLoc2))
+                self.ssBondList.append('\nDANG 3.035 SG_{}:{} CB_{}:{}^{}'
+                                       .format(chain1, num1.strip(), chain2, num2.strip(), altAltLoc2))
+                self.ssBondList.append('\nDANG 3.035 SG_{}:{}^{} CB_{}:{}'
+                                       .format(chain2, num2.strip(), altAltLoc2, chain1, num1.strip()))
                 alreadyInBondList.append(atom1)
                 alreadyInBondList.append(atom2)
                 self.ssBonds = True
