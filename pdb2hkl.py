@@ -191,7 +191,12 @@ class IO(object):
                         os.remove(pdbFile)
                 else:
                     print "WARNING: {} not valid.\n".format(pdbCode)
-                os.remove(filename)
+                # pdbFile.close()
+                try:
+                    os.remove(filename)
+                except WindowsError:
+                    pass
+
         return pdbFile
 
     def read(self):
