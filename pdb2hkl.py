@@ -898,10 +898,30 @@ class Data(object):
                     plusString = '{: >-6.4n}'.format(plus)
                 else:
                     plusString = '{: >7.5n}'.format(plus)
-            if len(str(plussigma).strip()) > 8:
-                plussigma = float(str(plussigma)[:8])
-            if len(str(minussigma).strip()) > 8:
-                minussigma = float(str(minussigma)[:8])
+            if len(str(plussigma).strip()) >= 8:
+                plussigma = float(str(plussigma)[:7])
+            if len(str(minussigma).strip()) >= 8:
+                minussigma = float(str(minussigma)[:7])
+
+            # if 'e' not in str(minussigma) and :
+            #     if len(str(minussigma).strip()) >= 8:
+            #         if str(minussigma).startswith('0'):
+            #             minussigma = float(str(minussigma)[:7])
+            #         else:
+            #             minussigma = float(str(minussigma)[:8])
+            # else:  # due to scientific notation, small numbers get an exponential number starting with e-5.
+            #     x = '{:f}'.format(minussigma)
+            #     minussigma = float(x[:7])
+            # if 'e' not in plussigma:
+            #     if len(str(plussigma).strip()) >= 8:
+            #         if str(plussigma).startswith('0'):
+            #             plussigma = float(str(plussigma)[:7])
+            #         else:
+            #             plussigma = float(str(plussigma)[:8])
+            # else:
+            #     x = '{:f}'.format(plussigma)
+            #     plussigma = float(x[:7])
+
                 # self.dataString.append('{:>4.0f} {:>3.0f} {:>3.0f} {: >7.7n} {:>7.6n} {:>3} \n'.format(h, k, l, minus, minussigma,
                 #                                                                          int(-1)))
                 # self.dataString.append('{:>4.0f} {:>3.0f} {:>3.0f} {: >7.6n} {:>7.6n} {:>3} \n'.format(h, k, l, plus, plussigma,
@@ -1012,14 +1032,18 @@ class Data(object):
                         meas = float(str(meas)[:7])
                     else:
                         meas = float(str(meas)[:8])
+            else:  # due to scientific notation, small numbers get an exponential number starting with e-5.
+                x = '{:f}'.format(meas)
+                meas = float(x[:7])
+            if 'e' not in str(meassigma):
                 if len(str(meassigma).strip()) >= 8:
                     if str(meassigma).startswith('0'):
                         meassigma = float(str(meassigma)[:7])
                     else:
                         meassigma = float(str(meassigma)[:8])
-            else:  # due to scientific notation, small numbers get an exponential number starting with e-5.
-                x = '{:f}'.format(meas)
-                meas = float(x[:7])
+            else: # due to scientific notation, small numbers get an exponential number starting with e-5.
+                x = '{:f}'.format(meassigma)
+                meassigma = float(x[:7])
             # print meas, type(meas), meassigma, type(meassigma)
 
             # print h, k, l, meas
