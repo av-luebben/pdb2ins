@@ -174,18 +174,21 @@ class IO(object):
         remoteCode = string.upper(pdbCode)
         # if not os.path.exists(pdb_dir):
         #     os.mkdir(pdb_dir)
-        if not os.path.exists(pdbFile) or force:
+        if not os.path.exists(pdbFile) or force:  # new url: https://files.rcsb.org/download/4ZXB-sf.cif.gz
             try:
                 filename = urllib.urlretrieve(
-                    'http://www.rcsb.org/pdb/files/r' +
-                    remoteCode + 'sf.ent.gz')[0]
-            except:
+                    'https://files.rcsb.org/download/' + remoteCode + '-sf.cif.gz')[0]
+            # except:  # old url: 'http://www.rcsb.org/pdb/files/r' + remoteCode + 'sf.ent.gz'
+            except Exception as ex:
+                template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+                message = template.format(type(ex).__name__, ex.args)
+                print message
                 print "WARNING: {} not found.\n".format(pdbCode)
             else:
                 if os.path.getsize(filename) > 0:  # If 0, then pdb code was invalid
                     try:
                         open(pdbFile, 'w').write(gzip.open(filename).read())
-                        print "INFO: Fetched structure factor file for PDB code: {}".format(pdbCode)
+                        print "INFO: Fetched structure factor file for PDB code {} and saved as {}.".format(pdbCode, pdbFile)
                     except IOError:
                         print 'IO ERROR. No file found. \nNo structure factor file available for this PDB code.'
                         os.remove(pdbFile)

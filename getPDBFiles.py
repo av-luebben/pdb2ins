@@ -33,29 +33,38 @@ def fetchPDB(pdbCode, options, force=False):
     remoteCode = string.upper(pdbCode)
     # if not os.path.exists(pdb_dir):
     #     os.mkdir(pdb_dir)
-    if not os.path.exists(pdbFile) or force:
+    if not os.path.exists(pdbFile) or force:  # new url: https://files.rcsb.org/download/4ZXB.pdb.gz
         try:
             filename = urllib.urlretrieve(
-                'http://www.rcsb.org/pdb/cgi/export.cgi/' +
-                remoteCode + '.pdb.gz?format=PDB&pdbId=' +
-                remoteCode + '&compression=gz')[0]
-        except:
-            print "Warning: {} not found.\n".format(pdbCode)
+                'https://files.rcsb.org/download/' +
+                remoteCode + '.pdb.gz')[0]
+            # old url 'http://www.rcsb.org/pdb/cgi/export.cgi/' + remoteCode + '.pdb.gz?format=PDB&pdbId=' + remoteCode + '&compression=gz'
+            # exit()
+        except Exception as ex:
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            print message
+        # except:
+        #     print "Warning: {} not found.\n".format(pdbCode)
         else:
             if os.path.getsize(filename) > 0:  # If 0, pdb code was invalid
+                # print 'file is there', os.path.isfile(filename)
                 try:
                     w = open(pdbFile, 'w')
+                    # print open(filename).read()
                     w.write(gzip.open(filename).read())
                     w.close()
-                    print "INFO: Fetched PDB file for: {}".format(pdbCode)
+                    print "INFO: Fetched PDB file for code {} and saved as {}.".format(pdbCode, pdbFile)
                 except IOError:
+                    # print 'exception raised'
                     try:
                         os.remove(pdbFile)
                     except OSError:
                         print ' *** ERROR: Filename or pdb code not valid. *** '
                         exit()
             else:
-                print "Warning: {} not valid.\n".format(pdbCode)
+                # print 'filesize', os.path.getsize(filename)
+                print "Warning: {} not valid. Download not successful. \n".format(pdbCode)
             os.remove(filename)
     return pdbFile
 

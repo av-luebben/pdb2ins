@@ -279,6 +279,10 @@ class Data(object):
                 instructionStrings.append(['\nREM Restraints missing for the following residues: \n',
                                            'REM ' + ', ' .join([str(i) for i in list(missingRestraints)])])
             instructionStrings.append(['\n'])
+            text = '\nINFO: Following ligands/residues ' \
+                   'have no restraints:\n      ' + ', ' .join([str(i) for i in list(missingRestraints)])
+            print text + '\n      Please remember to manually add restraints for this residues.\n'
+
         import itertools
         return '\n'.join(list(itertools.chain.from_iterable(instructionStrings)))
 
@@ -442,7 +446,7 @@ class Data(object):
         :return:
         """
         if not options['i']:
-            reply = raw_input("\nReset water occupancy to unity? (y/n) [Y]: ")
+            reply = raw_input("\nReset water occupancy to unity? (y or n) [Y]: ")
             if not reply or reply == 'y' or reply == 'Y':
                 resetOccupancy = True
             elif reply == 'n' or reply == 'N':
@@ -1146,7 +1150,7 @@ class Header(object):
                           'Information found:\n', line
                     continue
                 if not options['i']:
-                    reply = raw_input("Is the wavelength {} correct? (y/n) [Y]: ".format(wavelengthExtracted)).lower()
+                    reply = raw_input("Is the wavelength {} correct? (y or n) [Y]: ".format(wavelengthExtracted)).lower()
                     if reply == 'y' or reply == 'Y':
                         self.wavelength = wavelengthExtracted
                         return

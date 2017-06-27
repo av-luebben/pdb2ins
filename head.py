@@ -1,7 +1,7 @@
 head = """
     ########################################################################
     #                              PDB2INS                                 #
-    #                  by Anna V. Luebben (Windows_AMD64@2017-03-06)       #
+    #                  by Anna V. Luebben (Linux_x86_64@2017-03-08)        #
     ########################################################################
 
     Reads a PDB file and generates an .ins file for SHELXL.
