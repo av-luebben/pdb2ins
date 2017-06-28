@@ -77,7 +77,7 @@ def fetchPDBredo(pdbCode, options, force=False):
     :return: pdbfile
     """
     import urllib
-    import gzip
+    # import gzip
     import os
     import string
 
@@ -95,7 +95,10 @@ def fetchPDBredo(pdbCode, options, force=False):
                 'http://www.cmbi.ru.nl/pdb_redo/' +
                 remoteCode[1:3] + '/' +
                 remoteCode + '/' + remoteCode + '_besttls.pdb')[0]
-        except:
+        except Exception as ex:
+            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+            message = template.format(type(ex).__name__, ex.args)
+            print message
             print "Warning: {} not found.\n".format(pdbCode)
         else:
             if os.path.getsize(filename) > 0:  # If 0, then pdb code was invalid
