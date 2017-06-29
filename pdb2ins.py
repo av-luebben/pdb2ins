@@ -164,8 +164,12 @@ class Data(object):
                             print 'INFO: Using file \'{}\' instead.'.format(self.hklfile)
                             break
                 if self.hklfile.startswith('@'):
-                    options['filename'] = self.hklfile
-                    break
+                    if len(self.hklfile) == 5:
+                        options['filename'] = self.hklfile
+                        break
+                    else:
+                        print 'ERROR: Given pdb code is not correct! Please check.'
+                        pass
                 else:
                     break
         options['d'] = self.hklfile
@@ -239,7 +243,8 @@ class Data(object):
         """
         self.atomContainer.makeRestraintsForTermini(self.header.getResiDict())
         if 'HOH' in self.atomContainer.getOtherResiSet():
-            waterInstructions = ['ISOR_HOH 0.1 $O', 'CONN_HOH 0 O']
+            waterInstructions = ['ISOR_HOH 0.1 $O  !water atoms are restraint to near isotropic behavior',
+                                 'CONN_HOH 0 O  !generation of connectivity table fine-tunning']
             # waterInstructions = ['ISOR_HOH 0.1 $O', 'CONN_HOH 0 $O']
         else:
             waterInstructions = ["REM ISOR and CONN 0 recommended on adding water"]
@@ -279,6 +284,10 @@ class Data(object):
                 instructionStrings.append(['\nREM Restraints missing for the following residues: \n',
                                            'REM ' + ', ' .join([str(i) for i in list(missingRestraints)])])
             instructionStrings.append(['\n'])
+            text = '\nINFO: Following ligands/residues ' \
+                   'have no restraints:\n      ' + ', ' .join([str(i) for i in list(missingRestraints)])
+            print text + '\n      Please remember to manually add restraints for this residues.\n'
+
         import itertools
         return '\n'.join(list(itertools.chain.from_iterable(instructionStrings)))
 
@@ -324,7 +333,7 @@ class Data(object):
         if self.atomContainer.overlongResiNum:
             print '\n*** WARNING: One or more residues have a residue number larger than 10 000. Please check!***\n'
         if self.atomContainer.wrongResiName:
-            print '\n*** Warning: The files contain residue names starting with a number. \n' \
+            print '\n*** WARNING: The files contain residue names starting with a number. \n' \
                   '    Older SHELXL versions can only handle residues names starting with a letter.\n'
         if self.atomContainer.waterOffsetWarning:
             print '\nINFO: Water residue numbers were changed to handle residues with insertion codes.\n'
@@ -442,7 +451,7 @@ class Data(object):
         :return:
         """
         if not options['i']:
-            reply = raw_input("\nReset water occupancy to unity? (y/n) [Y]: ")
+            reply = raw_input("\nReset water occupancy to unity? (y or n) [Y]: ")
             if not reply or reply == 'y' or reply == 'Y':
                 resetOccupancy = True
             elif reply == 'n' or reply == 'N':
@@ -587,7 +596,7 @@ class IO(object):
             if not options['d']:
                 while True:
                     self.workfile = raw_input("\nEnter name of PDB file to read (To download a PDB "
-                                              "file enter \'@<PDBCODE>\'): ")#.upper()
+                                              "file enter \'@<PDBCODE>\'): ")  # .upper()
                     if not os.path.isfile(self.workfile) and not self.workfile.startswith('@'):
                         newstring = str(self.workfile[:-4].upper())+str(self.workfile[-4:])
                         if not os.path.isfile(newstring) and not os.path.isfile(self.workfile.lower()):
@@ -606,7 +615,7 @@ class IO(object):
                                 break
                     else:
                         break
-            else:  # here the possibility is handled, thatthe user is in interactive mode and created a .hkl already
+            else:  # here the possibility is handled, that the user is in interactive mode and created a .hkl already
                 hklfilename = options['d']  # the filename of the sf file is taken and an input filename suggested
                 if hklfilename.startswith('@'):
                     possiblePdbFilename = hklfilename
@@ -637,7 +646,9 @@ class IO(object):
                         break
         else:
             self.workfile = self.workfile
-        if self.workfile.startswith('@'):
+        if self.workfile.startswith('@'):  # if the user was asked for a filename, it is transferred to options
+            if not self.options['filename']:
+                self.options['filename'] = self.workfile  # now a correct output filename can be created
             if self.options['r']:
                 self.usePDBredo = True
             else:
@@ -649,6 +660,7 @@ class IO(object):
             self.workfile = fetchPDBredo(self.workfile[1:], self.options)
         elif self.workfile.startswith('@'):  # here elif when the if statement before is used!
             from getPDBFiles import fetchPDB
+            # print self.workfile[1:]
             self.workfile = fetchPDB(self.workfile[1:], self.options)
             # print "INFO: Fetching PDB file for entry {}.".format(self.workfile)
         else:
@@ -674,7 +686,11 @@ class IO(object):
         Asks the user for a name for the output file .ins.
         :return: output filename
         """
-        defaultName = os.path.splitext(self.workfile)[0] + '.ins'
+        # defaultName = os.path.splitext(self.workfile)[0] + '.ins'
+        if '_' in self.workfile and self.options['filename'].startswith('@'):
+            defaultName = os.path.splitext(self.workfile)[0].split('_')[0] + '.ins'
+        else:
+            defaultName = os.path.splitext(self.workfile)[0] + '.ins'
         if not self.options['i']:
             self.outputFilename = raw_input("\nEnter .ins filename to be created [{}]: ".format(defaultName))
             if not self.outputFilename:
@@ -1146,7 +1162,7 @@ class Header(object):
                           'Information found:\n', line
                     continue
                 if not options['i']:
-                    reply = raw_input("Is the wavelength {} correct? (y/n) [Y]: ".format(wavelengthExtracted)).lower()
+                    reply = raw_input("Is the wavelength {} correct? (y or n) [Y]: ".format(wavelengthExtracted)).lower()
                     if reply == 'y' or reply == 'Y':
                         self.wavelength = wavelengthExtracted
                         return
@@ -1286,7 +1302,7 @@ class Header(object):
         :param elementList: AtomContainer generated List of elements of interest for this instruction (elementList2)
         :return: string
         """
-        return 'RIGU \n'
+        return 'RIGU  !Apply enhanced rigid body restraints\n'
         # return 'RIGU {}\n'.format(' '.join([self.generalRefinement2[key] for key in self.generalRefinement2Order
         #                                     if key in elementlist]))
 
