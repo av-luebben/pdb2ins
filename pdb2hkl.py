@@ -177,7 +177,7 @@ class IO(object):
         if not os.path.exists(pdbFile) or force:  # new url: https://files.rcsb.org/download/4ZXB-sf.cif.gz
             try:
                 filename = urllib.urlretrieve(
-                    'https://files.rcsb.org/download/' + remoteCode + '-sf.cif.gz')[0]
+                    'http://files.rcsb.org/download/' + remoteCode + '-sf.cif.gz')[0]
             # except:  # old url: 'http://www.rcsb.org/pdb/files/r' + remoteCode + 'sf.ent.gz'
             except Exception as ex:
                 template = "An exception of type {0} occurred. Arguments:\n{1!r}"
