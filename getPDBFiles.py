@@ -2,7 +2,7 @@ __author__ = 'anna'
 """
 This is an addition to pdb2ins.py, the pdb2ins program.
 It is inspired by an excerpt from the program pymol (dali.py), fetching a pdb file after the pdb code is given.
-
+Now changed to run with current RCSB PDB RESTful web interface service.
 """
 
 # dali_file = "dali.txt"
@@ -15,6 +15,10 @@ It is inspired by an excerpt from the program pymol (dali.py), fetching a pdb fi
 def fetchPDB(pdbCode, options, force=False):
     """
     Given a PDB code this function retrieves the PDB file from the PDB database directly.
+    URL changed in Juni 2017 to current version, before :
+    old url 'http://www.rcsb.org/pdb/cgi/export.cgi/' + remoteCode + '.pdb.gz?format=PDB&pdbId=' + remoteCode +
+    '&compression=gz'
+    Also pdb file is now named in the scheme pdbcode + _a.pdb to differentiate from shelxl pdb file.
     :param pdbCode: A valid pdb code
     :param force: If force is true an existing file with the 'pdbfile' name is overwritten by the new one.
     :return:
@@ -28,7 +32,7 @@ def fetchPDB(pdbCode, options, force=False):
     if options['o']:
         pdbFile = ''.join(str(options['o']).split('.')[:-1]) + '.pdb'
     else:
-        pdbFile = pdbCode + '.pdb'
+        pdbFile = pdbCode + '_a.pdb'
     #    pdbFile = pdbCode.lower() + '.pdb'
     remoteCode = string.upper(pdbCode)
     # if not os.path.exists(pdb_dir):
@@ -36,14 +40,14 @@ def fetchPDB(pdbCode, options, force=False):
     if not os.path.exists(pdbFile) or force:  # new url: https://files.rcsb.org/download/4ZXB.pdb.gz
         try:
             filename = urllib.urlretrieve(
-                'https://files.rcsb.org/download/' +
-                remoteCode + '.pdb.gz')[0]
-            # old url 'http://www.rcsb.org/pdb/cgi/export.cgi/' + remoteCode + '.pdb.gz?format=PDB&pdbId=' + remoteCode + '&compression=gz'
+                'https://files.rcsb.org/download/' + remoteCode + '.pdb.gz')[0]
             # exit()
-        except Exception as ex:
-            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-            message = template.format(type(ex).__name__, ex.args)
-            print message
+        except IOError:
+            print 'ERROR: The RCSB PDB could not be reached.'
+        # except Exception as ex:
+        #     template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+        #     message = template.format(type(ex).__name__, ex.args)
+        #     print message
         # except:
         #     print "Warning: {} not found.\n".format(pdbCode)
         else:
@@ -64,7 +68,7 @@ def fetchPDB(pdbCode, options, force=False):
                         exit()
             else:
                 # print 'filesize', os.path.getsize(filename)
-                print "Warning: {} not valid. Download not successful. \n".format(pdbCode)
+                print "WARNING: {} not valid. Download not successful. \n".format(pdbCode)
             os.remove(filename)
     return pdbFile
 
@@ -85,7 +89,7 @@ def fetchPDBredo(pdbCode, options, force=False):
     if options['o']:
         pdbFile = ''.join(str(options['o']).split('.')[:-1]) + '.pdb'
     else:
-        pdbFile = pdbCode.lower() + '.pdb'
+        pdbFile = pdbCode.lower() + '_a.pdb'
     remoteCode = string.lower(pdbCode)
     # if not os.path.exists(pdb_dir):
     #     os.mkdir(pdb_dir)
@@ -95,21 +99,22 @@ def fetchPDBredo(pdbCode, options, force=False):
                 'http://www.cmbi.ru.nl/pdb_redo/' +
                 remoteCode[1:3] + '/' +
                 remoteCode + '/' + remoteCode + '_besttls.pdb')[0]
-        except Exception as ex:
-            template = "An exception of type {0} occurred. Arguments:\n{1!r}"
-            message = template.format(type(ex).__name__, ex.args)
-            print message
-            print "Warning: {} not found.\n".format(pdbCode)
+        # except Exception as ex:
+        #     template = "An exception of type {0} occurred. Arguments:\n{1!r}"
+        #     message = template.format(type(ex).__name__, ex.args)
+        #     print message
+        except IOError:
+            print "WARNING: {} not found.\n".format(pdbCode)
         else:
             if os.path.getsize(filename) > 0:  # If 0, then pdb code was invalid
                 try:
                     w = open(pdbFile, 'w')
                     w.write(open(filename).read())
                     w.close()
-                    print "INFO: Fetched pdb file {} from PDB_REDO (best TLS).".format(pdbCode)
+                    print "INFO: Fetched pdb file {} from PDB_REDO (best TLS) and saved as {}.".format(pdbCode, pdbFile)
                 except IOError:
                     os.remove(pdbFile)
             else:
-                print "Warning: {} not valid.\n".format(pdbCode)
+                print "WARNING: {} not valid.\n".format(pdbCode)
             os.remove(filename)
     return pdbFile
