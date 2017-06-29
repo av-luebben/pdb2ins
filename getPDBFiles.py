@@ -40,7 +40,7 @@ def fetchPDB(pdbCode, options, force=False):
     if not os.path.exists(pdbFile) or force:  # new url: https://files.rcsb.org/download/4ZXB.pdb.gz
         try:
             filename = urllib.urlretrieve(
-                'https://files.rcsb.org/download/' + remoteCode + '.pdb.gz')[0]
+                'http://files.rcsb.org/download/' + remoteCode + '.pdb.gz')[0]
             # exit()
         except IOError:
             print 'ERROR: The RCSB PDB could not be reached.'
