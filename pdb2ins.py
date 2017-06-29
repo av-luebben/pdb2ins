@@ -164,8 +164,12 @@ class Data(object):
                             print 'INFO: Using file \'{}\' instead.'.format(self.hklfile)
                             break
                 if self.hklfile.startswith('@'):
-                    options['filename'] = self.hklfile
-                    break
+                    if len(self.hklfile) == 5:
+                        options['filename'] = self.hklfile
+                        break
+                    else:
+                        print 'ERROR: Given pdb code is not correct! Please check.'
+                        pass
                 else:
                     break
         options['d'] = self.hklfile
