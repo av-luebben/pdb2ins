@@ -1271,7 +1271,7 @@ class Header(object):
     def getResiDict(self):
         return self.resiDict
 
-    def getResiSequence(self):
+    def printResiSequence(self):
         for key in self.resiDict.keys():
             print 'chain', key, self.resiDict[key]
 
@@ -1418,6 +1418,7 @@ class AtomContainer(object):
         self.cTerminalCAtoms = {}
         self.oldResiNum = None
         self.terminusRestraints = []
+        self.cysSAtomsList = []
         self.resicounter = None
         self.hetIDlist = []
         self.ssBonds = False
@@ -1854,7 +1855,7 @@ class AtomContainer(object):
 
     def getChainID(self, chainIDbefore):
         """
-        The chainID  is checked if it is peresent in the chainID dictionary. if  not it is added to the chainIDdict.
+        The chainID  is checked if it is present in the chainID dictionary. if  not it is added to the chainIDdict.
         should the chainID be not a character, the chain ID is changed. Is this function necessary or plausible?
         :param chainIDbefore:
         :return:
@@ -2136,7 +2137,6 @@ class AtomContainer(object):
         Searches Atom Dict for sulfur atoms in Cys residues. All those atoms are appended to a List.
         :return: List of sulfur atoms in cysteine residues.
         """
-        self.cysSAtomsList = []
         for atom in self.atomDict.values():
             resi = atom.getResidueName().upper()
             atomname = atom.getAtomElement()
