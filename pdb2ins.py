@@ -108,7 +108,8 @@ class Data(object):
         self.atomContainer.getResidueList()
         # self.header.extractCell()
         self.header.abbreviateSpaceGroup()
-        self.header.extractResiSequence()
+        self.atomContainer.createSequenceDict()
+        self.header.handleResidueSequence(self.atomContainer.getSequenceDict())
         # self.header.extractScale()
         self.header.makeGeneralRefinementInstructions()
         if 'HOH' in self.atomContainer.getOtherResiSet():
@@ -753,6 +754,7 @@ class Header(object):
         self.kisselContent = None
         self.dispInstructions = []
         self.makeDISP = False
+        self.sequenceDict = {}
 
     def interpretLine(self, line):
         """
@@ -1243,6 +1245,15 @@ class Header(object):
         # print scale, u
         return scale, u
 
+    def handleResidueSequence(self, sequenceDict):
+        """
+
+        :return:
+        """
+        if self.sequenceLines:
+            self.extractResiSequence()
+        self.sequenceDict = sequenceDict
+
     def extractResiSequence(self):
         """
         This function extracts the aa sequence as given in the SEQREF record of the pdb file. The aa sequence is
@@ -1269,7 +1280,10 @@ class Header(object):
         #     print 'done chain', key, len(self.resiDict[key]), self.resiDict[key]
 
     def getResiDict(self):
-        return self.resiDict
+        if self.resiDict:
+            return self.resiDict
+        else:
+            return self.sequenceDict
 
     def printResiSequence(self):
         for key in self.resiDict.keys():
@@ -1434,6 +1448,7 @@ class AtomContainer(object):
         self.resiNumberBefore = None
         self.resiNameBefore = None
         self.chainIDdict = {}
+        self.sequenceDict = {}
         self.chainCounter = 0
         self.firstNterm = True
         self.neut = False
@@ -1883,6 +1898,22 @@ class AtomContainer(object):
     #             self.overlongChains[chainID] = chain
     #     return self.overlongChains
 
+    def createSequenceDict(self):
+        """
+        Should the pdf file not contain a seq ref, the sequence should be extracted and saved to a dictionary by Chain.
+        dictionary SequenceDict, key = ChainID, value = List of Residues, 3 letter code
+        :return:
+        """
+        for chainID, chain in self.chains.items():
+            chain.finalize()
+            residueList = chain.getResiList()
+            self.sequenceDict[chainID] = residueList
+        # for key in self.sequenceDict.keys():
+        #     print 'chain', key, 'residues', self.sequenceDict[key]
+
+    def getSequenceDict(self):
+        return self.sequenceDict
+
     def getTerminalResidues(self):
         """
         extracts all residues which are both the first(last) and natural aa residue in a chain.
@@ -2105,7 +2136,7 @@ class AtomContainer(object):
     def getResidueList(self):
         """
         This Function should produce a list of all natural amino acids residues that are present in the pdb file.
-        afterwards this list can be used to get the necessary restrains from ResiIns.
+        Afterwards this list can be used to get the necessary restrains from ResiIns.
         Also all not natural amino acid residues are gathered into otherResiSet.
         :return: alphabetically sorted list of unique residues.
         """
@@ -2900,6 +2931,7 @@ class Chain(dict):
     def __init__(self, *args, **kwargs):
         super(Chain, self).__init__(*args, **kwargs)
         self.resiChain = None
+        self.residueList = []
 
     def finalize(self):
         """
@@ -2914,6 +2946,8 @@ class Chain(dict):
         the dictionary resichain is iterated by item and each item returned.
         :return:
         """
+        # for key in self.resiChain:
+        #     print key, self.resiChain[key]
         return [(item, self[item]) for item in self.resiChain]
 
     def __getitem__(self, item):
@@ -2921,6 +2955,9 @@ class Chain(dict):
             return super(Chain, self).__getitem__(item)
         except KeyError:
             raise NoResidueError
+
+    # def getChainID(self):
+    #     return self.chainID
 
     def getNTermResi(self):
         """
@@ -2934,9 +2971,18 @@ class Chain(dict):
                 # print 'This is the resinumber', resiNumber, 'and this is the residue', residue
                 return residue
 
+    def getResiList(self):
+        """
+        Should return a list containing the residue sequence for the chain.
+        :return:
+        """
+        for resiNumber, residue in self.iterate():
+            self.residueList.append(residue.getResiName())
+        return self.residueList
+
     def getCTermResi(self):
         """
-        checks if the residues are natural amino acids. Returns the residue only if true. the residues are iterated in
+        checks if the residues are natural amino acids. Returns the residue only if true. The residues are iterated in
         reverse, so that the first residue from the c terminal side for which this criteria is true is found.
         :return: string (residue)
         """
