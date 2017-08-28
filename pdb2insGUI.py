@@ -633,8 +633,8 @@ def setOutputFilename():
     and '.ins' inserted at the end. If the filename ends with a '.pdb' this is replaced by '.ins'.
     """
     f = fileName.get()
-    if f[-4:] == '.pdb':
-        return f.replace('.pdb', '.ins')
+    if f[-4:] == '_a.pdb':
+        return f.replace('_a.pdb', '.ins')
     if f[0] == '@':
         new = f.replace('@', '') + '.ins'
         return new
@@ -681,7 +681,7 @@ class printInfoText(object):
                             'entered.\n'
                             'When a PDB code is entered the .pdb file will be downloaded automatically from the RCSB '
                             'Protein Data Bank\n'
-                            'and saved in the form PDB code + ".pdb" to the same folder as the .ins file.\n'
+                            'and saved in the form "PDB code" + "_a.pdb" to the same folder as the .ins file.\n'
                             'After selecting a file or entering a PDB code, press the "LOAD" button.\n'
                             'Important information will be displayed and missing information can be added manually.\n'
                             'If a PDB code is given, the checkbox "PDB redo" can be selected to use the PDB redo server'
@@ -716,7 +716,7 @@ class printInfoText(object):
                                   'the appropriate suffix.\n'
                                   'For example a PDB code "@1a4m" is given and the output filename "hydrolase1a4m.ins"'
                                   'is chosen,\n'
-                                  'PDB2INS writes the files "hydrolase1a4m.ins" and "hydrolase1a4m.pdb".\n'
+                                  'PDB2INS writes the files "hydrolase1a4m.ins" and "hydrolase1a4m_a.pdb".\n'
                                   'This will also apply to the structure factor file and .hkl file, if the option '
                                   '"Create HKL file" is active.\n',
                     'anis': 'When the PDB file contains anisotropic data, selecting the anisotropic check box will '

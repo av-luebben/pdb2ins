@@ -3,7 +3,7 @@ __author__ = 'anna'
 first project pdb2ins
 by Anna Vera Luebben
 start February 2015
-version 2016/2 (October)
+version 2017/2 (August)
 
 Read pdb file and generate .ins file for SHELXL.
 The pdb file is assumed to conform to the Protein Data Bank notes
