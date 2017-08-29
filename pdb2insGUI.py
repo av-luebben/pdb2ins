@@ -574,7 +574,7 @@ def loadFile():
     resetGui()
     if not isFilename():
         return
-    options = {'filename': fileName.get(), 'r': checkredo(), 'o': None, 'i': True}
+    options = {'filename': fileName.get(), 'r': checkredo(), 'o': None, 'i': True, 'd': None}
     info = Info(options)
     if not info.everythingOkay:
         t.delete(1.0, END)
