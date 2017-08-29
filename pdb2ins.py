@@ -3,7 +3,7 @@ __author__ = 'anna'
 first project pdb2ins
 by Anna Vera Luebben
 start February 2015
-version 2016/2 (October)
+version 2017/2 (August)
 
 Read pdb file and generate .ins file for SHELXL.
 The pdb file is assumed to conform to the Protein Data Bank notes
@@ -590,10 +590,15 @@ class IO(object):
                         self.workfile = newstring
                     if os.path.isfile(self.workfile.lower()):
                         self.workfile = self.workfile.lower()
+                if self.workfile.startswith('@'):
+                    trystring = str(self.workfile[-4:]) + '_a.pdb'  # when the file was already loaded in the GUI
+                    if os.path.isfile(trystring):
+                        self.workfile = trystring
             except TypeError:
+                print 'type error'
                 self.workfile = None
         if not self.workfile:  # in interactive mode without cmd options, the user is asked for the filename
-            if not options['d']:
+            if not self.options['d'] and not self.options['i']:
                 while True:
                     self.workfile = raw_input("\nEnter name of PDB file to read (To download a PDB "
                                               "file enter \'@<PDBCODE>\'): ")  # .upper()
@@ -616,42 +621,45 @@ class IO(object):
                     else:
                         break
             else:  # here the possibility is handled, that the user is in interactive mode and created a .hkl already
-                hklfilename = options['d']  # the filename of the sf file is taken and an input filename suggested
-                if hklfilename.startswith('@'):
-                    possiblePdbFilename = hklfilename
-                else:
-                    possiblePdbFilename = ''.join(str(hklfilename).split('.')[:-1]) + '.pdb'
-                while True:
-                    self.workfile = raw_input("\nEnter name of PDB file to read (To download a PDB "
-                                              "file enter \'@<PDBCODE>\')[{}]: ".format(possiblePdbFilename))  #.upper()
-                    if not self.workfile:
-                        self.workfile = possiblePdbFilename
-                    if not os.path.isfile(self.workfile) and not self.workfile.startswith('@'):
-                        newstring = str(self.workfile[:-4].upper())+str(self.workfile[-4:])
-                        if not os.path.isfile(newstring) and not os.path.isfile(self.workfile.lower()):
-                            # print self.workfile.upper(), newstring, self.workfile.lower()
-                            print 'INFO: File \'{}\' not found.'.format(self.workfile)
-                        if os.path.isfile(newstring):
-                            self.workfile = newstring
-                            break
-                        if os.path.isfile(self.workfile.lower()):
-                            self.workfile = self.workfile.lower()
-                            break
-                        if not self.workfile.endswith('.pdb'):
-                            self.workfile += '.pdb'
-                            if os.path.isfile(self.workfile):
-                                print 'INFO: Using file \'{}\' instead.'.format(self.workfile)
-                                break
+                if self.options['d']:
+                    hklfilename = options['d']  # the filename of the sf file is taken and an input filename suggested
+                    if hklfilename.startswith('@'):
+                        possiblePdbFilename = hklfilename
                     else:
-                        break
+                        possiblePdbFilename = ''.join(str(hklfilename).split('.')[:-1]) + '.pdb'
+                    while True:
+                        self.workfile = raw_input("\nEnter name of PDB file to read (To download a PDB "
+                                                  "file enter \'@<PDBCODE>\')[{}]: ".format(possiblePdbFilename))  #.upper()
+                        if not self.workfile:
+                            self.workfile = possiblePdbFilename
+                        if not os.path.isfile(self.workfile) and not self.workfile.startswith('@'):
+                            newstring = str(self.workfile[:-4].upper())+str(self.workfile[-4:])
+                            if not os.path.isfile(newstring) and not os.path.isfile(self.workfile.lower()):
+                                # print self.workfile.upper(), newstring, self.workfile.lower()
+                                print 'INFO: File \'{}\' not found.'.format(self.workfile)
+                            if os.path.isfile(newstring):
+                                self.workfile = newstring
+                                break
+                            if os.path.isfile(self.workfile.lower()):
+                                self.workfile = self.workfile.lower()
+                                break
+                            if not self.workfile.endswith('.pdb'):
+                                self.workfile += '.pdb'
+                                if os.path.isfile(self.workfile):
+                                    print 'INFO: Using file \'{}\' instead.'.format(self.workfile)
+                                    break
+                        else:
+                            break
         else:
             self.workfile = self.workfile
+
         if self.workfile.startswith('@'):  # if the user was asked for a filename, it is transferred to options
             if not self.options['filename']:
                 self.options['filename'] = self.workfile  # now a correct output filename can be created
             if self.options['r']:
                 self.usePDBredo = True
             else:
+                # if not self.options['i']:
                 self.askPDBredo()
             if self.usePDBredo:
                 self.options['r'] = True
