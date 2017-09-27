@@ -31,6 +31,8 @@ padding = '<4.0'
 
 buildin_raw_Input = raw_input
 
+specAtom = 'OH'
+specResi = 'TYR'
 
 def dummy(_):
     """
@@ -107,6 +109,11 @@ class Data(object):
         self.dealWithHAtoms()
         self.atomContainer.getResidueList()
         # self.header.extractCell()
+        if specAtom and specResi:
+            self.atomContainer.findSpecifiedAtom(specResi, specAtom, None)
+            self.atomContainer.findAllNonAAAtoms()
+            self.atomContainer.findAllWaterAtoms()
+            self.atomContainer.findNonAANearSpecAtom('wat')
         self.header.abbreviateSpaceGroup()
         self.atomContainer.createSequenceDict()
         self.header.handleResidueSequence(self.atomContainer.getSequenceDict())
@@ -114,6 +121,7 @@ class Data(object):
         self.header.makeGeneralRefinementInstructions()
         if 'HOH' in self.atomContainer.getOtherResiSet():
             self.askWaterOccupancy()
+
         self.joinstrings()
         self.IO.writeFile(self)
 
@@ -591,10 +599,15 @@ class IO(object):
                         self.workfile = newstring
                     if os.path.isfile(self.workfile.lower()):
                         self.workfile = self.workfile.lower()
+                if self.workfile.startswith('@'):
+                    trystring = str(self.workfile[-4:]) + '_a.pdb'  # if the file was already loaded in the GUI
+                    if os.path.isfile(trystring):
+                        print trystring
+                        self.workfile = trystring
             except TypeError:
                 self.workfile = None
         if not self.workfile:  # in interactive mode without cmd options, the user is asked for the filename
-            if not options['d']:
+            if not self.options['d']:
                 while True:
                     self.workfile = raw_input("\nEnter name of PDB file to read (To download a PDB "
                                               "file enter \'@<PDBCODE>\'): ")  # .upper()
@@ -619,9 +632,9 @@ class IO(object):
             else:  # here the possibility is handled, that the user is in interactive mode and created a .hkl already
                 hklfilename = options['d']  # the filename of the sf file is taken and an input filename suggested
                 if hklfilename.startswith('@'):
-                    possiblePdbFilename = hklfilename
+                    possiblePdbFilename = str(hklfilename)
                 else:
-                    possiblePdbFilename = ''.join(str(hklfilename).split('.')[:-1]) + '.pdb'
+                    possiblePdbFilename = ''.join(str(hklfilename).split('.')[:-1]) + '_a.pdb'
                 while True:
                     self.workfile = raw_input("\nEnter name of PDB file to read (To download a PDB "
                                               "file enter \'@<PDBCODE>\')[{}]: ".format(possiblePdbFilename))  #.upper()
@@ -1433,6 +1446,10 @@ class AtomContainer(object):
         self.oldResiNum = None
         self.terminusRestraints = []
         self.cysSAtomsList = []
+        self.nonNaturalAAAtomList = []
+        self.waterAtomList = []
+        self.specifiedAtomList = []
+        self.removeAtomsList = []
         self.resicounter = None
         self.hetIDlist = []
         self.ssBonds = False
@@ -1533,7 +1550,6 @@ class AtomContainer(object):
             # resiNameNew = self.changeResiName(resiName)
         except ValueError:
             pass
-
 
         # the following part handles negative residue seq numbers at the beginning of the chain
         if int(resiNumber) < 0:
@@ -2162,6 +2178,90 @@ class AtomContainer(object):
         Returns a list of all residues not including natural AA and present in the pdb file.
         """
         return self.otherResiList
+
+    def findAllNonAAAtoms(self):
+        """
+        All non natural amoni acid residue atoms are found and saved as object to a list.
+        :return: list
+        """
+        naturalAA = [x.upper() for x in ['Ala', 'Arg', 'Asn', 'Asp', 'Cys', 'Gln', 'Glu', 'Gly', 'His', 'Ile', 'Leu',
+                                         'Lys', 'Met', 'Phe', 'Pro', 'Ser', 'Thr', 'Trp', 'Tyr', 'Val']]
+        for atom in self.atomDict.values():
+            resi = atom.getResidueName().upper()
+            atomelement = atom.getAtomElement()
+            # flag = atom.isComplete()[0]
+            if resi not in naturalAA:
+                # print resi, atomname
+                self.nonNaturalAAAtomList.append(atom)
+
+    def getNonNaturalAAAtoms(self):
+        return self.nonNaturalAAAtomList
+
+    def findAllWaterAtoms(self):
+        """
+        All atoms in water residues are saved to a list as an object.
+        :return:
+        """
+        for atom in self.atomDict.values():
+            resi = atom.getResidueName().upper()
+            atomname = atom.getAtomName()
+            if resi == 'HOH':
+                self.waterAtomList.append(atom)
+
+    def getWaterAtomList(self):
+        return self.waterAtomList
+
+    def findSpecifiedAtom(self, type, spAtom, flag):
+        """
+        With given a Type of residue e.g. 'tyr' and an atom name e.g. 'O2' this function should find all residues with
+        this name and perhaps an additional flag (none right now) and list
+        them/return them. Atom object is writen to specifiedAtomList
+        :param type:
+        :param flag:
+        :return: list
+        """
+        residuetype = type
+        # isComplete = flag
+        specifiedatom = spAtom
+        for atom in self.atomDict.values():
+            resiname = atom.getResidueName().upper()
+            atomname = atom.getAtomName()
+            # flag = atom.isComplete()[0]
+            if resiname == residuetype and atomname == str(specifiedatom):
+                print resiname, atomname, atom.getChainID(), atom.getResidueNumber()
+                self.specifiedAtomList.append(atom)
+
+    def getSpecifiedAtoms(self):
+        return self.specifiedAtomList
+
+    def findNonAANearSpecAtom(self, flag):
+        """
+        Takes the specifiedAtomList and searches for non aa atoms near this atom. Perhaps an additional flag
+        (now if it is water 'wat' or all non aa residues 'non')
+        :return:
+        """
+        if flag == 'non':
+            secondList = self.getNonNaturalAAAtoms()
+        else:  # also covers 'wat' as flag
+            secondList = self.getWaterAtomList()
+
+        for i, atom1 in enumerate(self.getSpecifiedAtoms()):
+            # altLoc1 = atom1.getAltLoc()
+            for j in xrange(len(secondList)-i-1):
+                j += i+1
+                atom2 = secondList[j]
+                # altLoc2 = atom2.getAltLoc()
+                # print atom1.getAtomCoord(), atom2.getAtomCoord()
+                if self.getAtomDistance(atom1.getAtomCoord(), atom2.getAtomCoord()) < 5:
+                    # self.ssBonds = True
+                    # chain1 = atom1.getChainID()
+                    # chain2 = atom2.getChainID()
+                    # num1 = atom1.getResiSeqNum()
+                    # num2 = atom2.getResiSeqNum()
+                    self.removeAtomsList.append(atom2)
+
+    def getRemoveAtomList(self):
+        return self.removeAtomsList
 
     def findCysSAtoms(self):
         """
