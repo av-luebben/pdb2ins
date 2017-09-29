@@ -39,17 +39,17 @@ class CommandlineParser(object):
             pdb2ins myPDBFile.pdb -w 1.54178 -h 4 -c 100,20.5,30,90,90,90 -i -a -o myFile.ins
         """
         self.options = {'filename': None,
-                        'w': None,
-                        'h': None,
-                        's': None,
-                        'r': False,
-                        'c': None,
-                        'i': False,
-                        'a': False,
+                        'w': None,  # enter wavelength
+                        'h': None,  # give hklf value
+                        's': None,  # enter spacegroup (no space)
+                        'r': False,  # use pdb redo
+                        'c': None,  # cell, 6 parameters (comma separated, no space)
+                        'i': False,  # interactive modus (questions)
+                        'a': False,  # use anis data?
                         'z': None,  # z-value, number of units per cell
                         'b': False,  # create hkl file
                         'd': None,  # give structure factor file name, if not pdb code given as filename
-                        'o': None,
+                        'o': None,  # specify output filename
                         'GUI': False}
         self.validates = {'filename': self._validate_dummy,
                           'w': self._validate_w,

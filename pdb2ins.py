@@ -33,6 +33,8 @@ buildin_raw_Input = raw_input
 
 specAtom = 'OH'
 specResi = 'TYR'
+specResiFlag = 'non'
+
 
 def dummy(_):
     """
@@ -110,10 +112,12 @@ class Data(object):
         self.atomContainer.getResidueList()
         # self.header.extractCell()
         if specAtom and specResi:
+            print 'spec atom found'
             self.atomContainer.findSpecifiedAtom(specResi, specAtom, None)
             self.atomContainer.findAllNonAAAtoms()
             self.atomContainer.findAllWaterAtoms()
-            self.atomContainer.findNonAANearSpecAtom('wat')
+            self.atomContainer.findNonAANearSpecAtom(specResiFlag)
+            self.atomContainer.makeOMITrecords()
         self.header.abbreviateSpaceGroup()
         self.atomContainer.createSequenceDict()
         self.header.handleResidueSequence(self.atomContainer.getSequenceDict())
@@ -532,6 +536,9 @@ class Data(object):
             self.strings.append("REM Instructions for disulfide-bridges:\n")
             self.strings += self.atomContainer.getSSBonds()
             self.strings.append("\n\n")
+        if self.atomContainer.omitList:
+            self.strings.append("REM Instructions for OMIT atoms: \n")
+            self.strings += self.atomContainer.getOmitAtoms()
         self.strings.append(self.atomContainer.asShelxString(self.header.getCell()))
         # self.strings.append(self.atomContainer.asShelxString(self.header.getCell()))
         self.strings.append("\n\n")
@@ -701,10 +708,16 @@ class IO(object):
         :return: output filename
         """
         # defaultName = os.path.splitext(self.workfile)[0] + '.ins'
-        if '_' in self.workfile and self.options['filename'].startswith('@'):
-            defaultName = os.path.splitext(self.workfile)[0].split('_')[0] + '.ins'
-        else:
-            defaultName = os.path.splitext(self.workfile)[0] + '.ins'
+        try:
+            if '_' in self.workfile and self.options['filename'].startswith('@'):
+                defaultName = os.path.splitext(self.workfile)[0].split('_')[0] + '.ins'
+            else:
+                defaultName = os.path.splitext(self.workfile)[0] + '.ins'
+        except AttributeError:
+            if '_' in self.workfile:
+                defaultName = os.path.splitext(self.workfile)[0].split('_')[0] + '.ins'
+            else:
+                defaultName = os.path.splitext(self.workfile)[0] + '.ins'
         if not self.options['i']:
             self.outputFilename = raw_input("\nEnter .ins filename to be created [{}]: ".format(defaultName))
             if not self.outputFilename:
@@ -1450,6 +1463,7 @@ class AtomContainer(object):
         self.waterAtomList = []
         self.specifiedAtomList = []
         self.removeAtomsList = []
+        self.omitList = []
         self.resicounter = None
         self.hetIDlist = []
         self.ssBonds = False
@@ -2179,17 +2193,21 @@ class AtomContainer(object):
         """
         return self.otherResiList
 
+    # the following part is used for solvent model analysis.
+
     def findAllNonAAAtoms(self):
         """
         All non natural amoni acid residue atoms are found and saved as object to a list.
         :return: list
         """
+        # print 'find all non aa'
         naturalAA = [x.upper() for x in ['Ala', 'Arg', 'Asn', 'Asp', 'Cys', 'Gln', 'Glu', 'Gly', 'His', 'Ile', 'Leu',
                                          'Lys', 'Met', 'Phe', 'Pro', 'Ser', 'Thr', 'Trp', 'Tyr', 'Val']]
         for atom in self.atomDict.values():
             resi = atom.getResidueName().upper()
             atomelement = atom.getAtomElement()
             # flag = atom.isComplete()[0]
+            atomname = atom.getPDBAtomName()
             if resi not in naturalAA:
                 # print resi, atomname
                 self.nonNaturalAAAtomList.append(atom)
@@ -2202,10 +2220,12 @@ class AtomContainer(object):
         All atoms in water residues are saved to a list as an object.
         :return:
         """
+        # print 'find all water atoms'
         for atom in self.atomDict.values():
             resi = atom.getResidueName().upper()
             atomname = atom.getAtomName()
             if resi == 'HOH':
+                # print resi, atomname
                 self.waterAtomList.append(atom)
 
     def getWaterAtomList(self):
@@ -2217,35 +2237,7 @@ class AtomContainer(object):
         this name and perhaps an additional flag (none right now) and list
         them/return them. Atom object is writen to specifiedAtomList
         :param type:
-        :param flag:
-        :return: list
-        """
-        residuetype = type
-        # isComplete = flag
-        specifiedatom = spAtom
-        for atom in self.atomDict.values():
-            resiname = atom.getResidueName().upper()
-            atomname = atom.getAtomName()
-            # flag = atom.isComplete()[0]
-            if resiname == residuetype and atomname == str(specifiedatom):
-                print resiname, atomname, atom.getChainID(), atom.getResidueNumber()
-                self.specifiedAtomList.append(atom)
-
-    def getSpecifiedAtoms(self):
-        return self.specifiedAtomList
-
-    def findNonAANearSpecAtom(self, flag):
-        """
-        Takes the specifiedAtomList and searches for non aa atoms near this atom. Perhaps an additional flag
-        (now if it is water 'wat' or all non aa residues 'non')
-        :return:
-        """
-        if flag == 'non':
-            secondList = self.getNonNaturalAAAtoms()
-        else:  # also covers 'wat' as flag
-            secondList = self.getWaterAtomList()
-
-        for i, atom1 in enumerate(self.getSpecifiedAtoms()):
+        :param flag:(self.getSpecifiedAtoms()):
             # altLoc1 = atom1.getAltLoc()
             for j in xrange(len(secondList)-i-1):
                 j += i+1
@@ -2258,10 +2250,87 @@ class AtomContainer(object):
                     # chain2 = atom2.getChainID()
                     # num1 = atom1.getResiSeqNum()
                     # num2 = atom2.getResiSeqNum()
-                    self.removeAtomsList.append(atom2)
+                    self.removeAt
+        :return: list
+        """
+        # print 'in findSpecAtom'
+        residuetype = type
+        # isComplete = flag
+        specifiedAtom = spAtom
+        # print residuetype, specifiedAtom
+        for atom in self.atomDict.values():
+            resiname = atom.getResidueName().upper()
+            atomname = atom.getPDBAtomName()
+            chainID = atom.getChainID()
+            resiNumber = atom.getResiSeqNum()
+            # print resiname, atomname
+            # flag = atom.isComplete()[0]
+            # if resiname == residuetype:
+            #     print resiname, residuetype, atomname
+            # if atomname == specifiedAtom:
+            #     print atomname, specifiedAtom, residuetype
+            if resiname == residuetype and atomname == specifiedAtom:
+                # print 'specified atom', resiname, atomname, chainID, resiNumber
+                self.specifiedAtomList.append(atom)
+
+    def getSpecifiedAtoms(self):
+        return self.specifiedAtomList
+
+    def findNonAANearSpecAtom(self, flag):
+        """
+        Takes the specifiedAtomList and searches for non aa atoms near this atom. Perhaps an additional flag
+        (now if it is water 'wat' or all non aa residues 'non')
+        :return:
+        """
+        # print 'find all non aa or water near specified atom'
+        if flag == 'non':
+            secondList = self.getNonNaturalAAAtoms()
+        else:  # also covers 'wat' as flag
+            secondList = self.getWaterAtomList()
+
+        for atom1 in secondList:
+            for atom2 in self.getSpecifiedAtoms():
+                if self.getAtomDistance(atom1.getAtomCoord(), atom2.getAtomCoord()) < 5:
+                    self.removeAtomsList.append(atom1)
+                    break
+
+        # for i, atom1 in enumerate(self.getSpecifiedAtoms()):
+        #     # altLoc1 = atom1.getAltLoc()
+        #     for j in xrange(len(secondList)-i-1):
+        #         j += i+1
+        #         atom2 = secondList[j]
+        #         # altLoc2 = atom2.getAltLoc()
+        #         # print atom1.getAtomCoord(), atom2.getAtomCoord()
+        #         if self.getAtomDistance(atom1.getAtomCoord(), atom2.getAtomCoord()) < 5:
+        #             # self.ssBonds = True
+        #             # chain1 = atom1.getChainID()
+        #             # chain2 = atom2.getChainID()
+        #             # num1 = atom1.getResiSeqNum()
+        #             # num2 = atom2.getResiSeqNum()
+        #             self.removeAtomsList.append(atom2)
 
     def getRemoveAtomList(self):
         return self.removeAtomsList
+
+    def makeOMITrecords(self):
+        """
+        All atoms are writen to a list with the string need to omit the atom in shelxl. used here to remove atoms near
+        a specified atom, to get a atom free electron density map near the specified atom.
+        :return:
+        """
+        # print 'making omit records', self.removeAtomsList
+        for atom in self.removeAtomsList:
+            atomname = atom.getPDBAtomName()
+            chainID = atom.getChainID()
+            residueNumber = atom.getResiSeqNum()
+            omitAtomString = 'OMIT ' + str(atomname) + '_' + str(chainID) + ':' + str(residueNumber) + '\n'
+            # print omitAtomString
+            self.omitList.append(omitAtomString)
+
+    def getOmitAtoms(self):
+        return self.omitList
+
+    # the former part is used for solvent model analysis.
 
     def findCysSAtoms(self):
         """
