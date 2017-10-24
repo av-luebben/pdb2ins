@@ -13,9 +13,7 @@ rootdir = '/home/anna/pdbFiles/pdbFilesTill17Res'
 
 filename = rootdir + folder + filename
 #
-allow_duplicate_sequence_numbers()
 
-#
 read_shelx_ins_file(filenameRes)
 
 #
@@ -40,7 +38,7 @@ set_last_map_contour_level_0.05
 set_map_is_difference_map(3)
 
 #
-eport_map(3, FullExportPath)
+export_map(3, FullExportPath)
 
 #
 coot_real_exit(0)

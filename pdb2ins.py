@@ -31,9 +31,12 @@ padding = '<4.0'
 
 buildin_raw_Input = raw_input
 
+######################for water model analysis########################
 specAtom = 'OH'
 specResi = 'TYR'
-specResiFlag = 'non'
+specResiFlag = 'wat'  # 'wat' or 'non'
+# in the function 'writeSpecifiedAtomFile' an AtomName needed for gitty is specified. Needs to be changed for other Resi
+######################################################################
 
 
 def dummy(_):
@@ -100,7 +103,9 @@ class Data(object):
         self.atomContainer = AtomContainer()
         self.header = Header()
         self.askHKL()
+        # print 'now starting makeHKLfile()'
         self.makeHKLfile()
+        # print 'finished with making hkl file.'
         self.IO.read()
         self.hasHAtoms = False
         self.neutronData = False
@@ -112,8 +117,9 @@ class Data(object):
         self.atomContainer.getResidueList()
         # self.header.extractCell()
         if specAtom and specResi:
-            print 'spec atom found'
+            # print 'spec atom found'
             self.atomContainer.findSpecifiedAtom(specResi, specAtom, None)
+            self.atomContainer.writeSpecifiedAtomFile()
             self.atomContainer.findAllNonAAAtoms()
             self.atomContainer.findAllWaterAtoms()
             self.atomContainer.findNonAANearSpecAtom(specResiFlag)
@@ -147,8 +153,8 @@ class Data(object):
                     break
                 if doHKL == 'N' or doHKL == 'n':
                     break
-            if options['b'] and not options['filename']:  # check if indentation correct!
-                self.askHKLfilename()
+        if options['b'] and not options['filename']:  # check if indentation correct!
+            self.askHKLfilename()
 
     def askHKLfilename(self):
         """
@@ -159,7 +165,7 @@ class Data(object):
         """
         while True:
                 self.hklfile = raw_input("\nEnter name of structure factor file to read (To download a PDB "
-                                          "file enter \'@<PDBCODE>\'): ")#.upper()
+                                         "file enter \'@<PDBCODE>\'): ")#.upper()
                 if not os.path.isfile(self.hklfile) and not self.hklfile.startswith('@'):
                     newstring = str(self.hklfile[:-4].upper())+str(self.hklfile[-4:])
                     if not os.path.isfile(newstring) and not os.path.isfile(self.hklfile.lower()):
@@ -198,7 +204,10 @@ class Data(object):
         The subroutine pdb2hkl is started.
         :return:
         """
+        # print ' first line makeHKLfile.'
+        # print 'these are the Options', options
         if options['b']:
+            # print 'options b found.'
             if options['d']:
                 filename = options['d']
             else:
@@ -229,12 +238,13 @@ class Data(object):
                 i = False
             # print outfile
             optionsForPdb2hkl = {'filename': filename, 'i': i, 'o': outfile}
-            # print optionsForPdb2hkl
+            # print 'these are the options for pdb2hkl', optionsForPdb2hkl
             try:
                 print 'INFO: Starting pdb2hkl.'
                 try:
                     self.header.hklf = pdb2hkl.run(optionsForPdb2hkl)
                 except SystemExit:
+                    # print 'error occured with options 'b', System Exit! '
                     pass
                 # self.hklf = pdb2hkl.Data.getHKLF()
                 # print self.header.hklf
@@ -383,17 +393,20 @@ class Data(object):
                'HFIX instructions for natural amino acids.')
                # 'It should be noted that is not recommended to use the HFIX instructions after disorder has been
                # modeled')
-        if not options['i']:
-            reply = raw_input('Delete all Hydrogen atoms in .ins file? (y or n) [Y]: ')
-            if reply == 'N' or reply == 'n':
-                self.atomContainer.keepHAtoms = True
-            elif reply == 'Y' or reply == 'y' or not reply:
-                self.atomContainer.keepHAtoms = False
+        if not options['e']:
+            if not options['i']:
+                reply = raw_input('Delete all Hydrogen atoms in .ins file? (y or n) [Y]: ')
+                if reply == 'N' or reply == 'n':
+                    self.atomContainer.keepHAtoms = True
+                elif reply == 'Y' or reply == 'y' or not reply:
+                    self.atomContainer.keepHAtoms = False
+                else:
+                    self.atomContainer.keepHAtoms = False
             else:
+                print 'INFO: Hydrogen atoms will not be transferred to .ins file.'
                 self.atomContainer.keepHAtoms = False
-        else:
-            print 'INFO: Hydrogen atoms will not be transferred to .ins file.'
-            self.atomContainer.keepHAtoms = False
+        else:  # This part should only be run if options 'e' is True.
+            self.atomContainer.keepHAtoms = True
 
     def isCrystData(self, line):
         """
@@ -563,7 +576,7 @@ class IO(object):
         # if not self.options['GUI']:
         if not self.options['i'] and not self.options['r']:
             while True:
-                pdbRedo = raw_input('\nDownload PDB file from RCSB Protein Data Base (1) or PDB_REDO databank '
+                pdbRedo = raw_input('\nDownload PDB file from RCSB Protein Data Base (1) or PDB_REDO database '
                                     '(2)? [1]: ')
                 if not pdbRedo or pdbRedo == '1':
                     self.usePDBredo = False
@@ -589,11 +602,15 @@ class IO(object):
         :return: self.workfile
         """
         self.workfile = self.options['filename']
+        # print self.workfile, 'this is the workfile'
         if self.workfile:  # when cmd parser is used, the filename should already be specified, skipping user input
             try:
+                # print '1'
                 if not os.path.isfile(self.workfile) and '@' not in self.workfile:
+                    # print '2'
                     newstring = str(self.workfile[:-4].upper())+str(self.workfile[-4:])
                     if not os.path.isfile(newstring) and not os.path.isfile(self.workfile.lower()):
+                        # print '3'
                         print 'INFO: File {} not found.'.format(self.workfile)
                         if not self.workfile.endswith('.pdb'):
                             self.workfile += '.pdb'
@@ -603,14 +620,16 @@ class IO(object):
                                 print ' *** Error: Given file name not valid. *** '
                                 self.workfile = None
                     if os.path.isfile(newstring):
+                        # print '4'
                         self.workfile = newstring
                     if os.path.isfile(self.workfile.lower()):
+                        # print '5'
                         self.workfile = self.workfile.lower()
-                if self.workfile.startswith('@'):
-                    trystring = str(self.workfile[-4:]) + '_a.pdb'  # if the file was already loaded in the GUI
-                    if os.path.isfile(trystring):
-                        print trystring
-                        self.workfile = trystring
+                # if self.workfile.startswith('@'):
+                #     trystring = str(self.workfile[-4:]) + '_a.pdb'  # if the file was already loaded in the GUI
+                #     if os.path.isfile(trystring):
+                #         print trystring
+                #         self.workfile = trystring
             except TypeError:
                 self.workfile = None
         if not self.workfile:  # in interactive mode without cmd options, the user is asked for the filename
@@ -640,8 +659,8 @@ class IO(object):
                 hklfilename = options['d']  # the filename of the sf file is taken and an input filename suggested
                 if hklfilename.startswith('@'):
                     possiblePdbFilename = str(hklfilename)
-                else:
-                    possiblePdbFilename = ''.join(str(hklfilename).split('.')[:-1]) + '_a.pdb'
+                # else:
+                #     possiblePdbFilename = ''.join(str(hklfilename).split('.')[:-1]) + '_a.pdb'
                 while True:
                     self.workfile = raw_input("\nEnter name of PDB file to read (To download a PDB "
                                               "file enter \'@<PDBCODE>\')[{}]: ".format(possiblePdbFilename))  #.upper()
@@ -666,8 +685,10 @@ class IO(object):
                     else:
                         break
         else:
+            # print '6'
             self.workfile = self.workfile
         if self.workfile.startswith('@'):  # if the user was asked for a filename, it is transferred to options
+            # print '7'
             if not self.options['filename']:
                 self.options['filename'] = self.workfile  # now a correct output filename can be created
             if self.options['r']:
@@ -680,6 +701,7 @@ class IO(object):
             from getPDBFiles import fetchPDBredo
             self.workfile = fetchPDBredo(self.workfile[1:], self.options)
         elif self.workfile.startswith('@'):  # here elif when the if statement before is used!
+            # print '8'
             from getPDBFiles import fetchPDB
             # print self.workfile[1:]
             self.workfile = fetchPDB(self.workfile[1:], self.options)
@@ -1321,12 +1343,13 @@ class Header(object):
         In three parts (General refinement, general Refinement2, general Refinement3) the refinement instruction, which
         are present at the begin of the .ind file are listed.
         general Refinement is used for all fix instructions from DEFS to WPDB.
+            CGLS is set to 0 to calculate fcf but nor refine for solvent analysis.
         generalRefinement2 is used to make DELU and SIMU instructions. Herefore the the elementList2 from AtomContainer
         is used to give a list of all element in the pdb, swhich are relevant for these instructions.
         generalRefinement3 is used to give the fixed instructions from BUMP to MORE.
         :return: 3 lists with general refinement instructions.
         """
-        self.generalRefinement = ['DEFS 0.02 0.1 0.01 0.04', 'CGLS 20 -1', 'SHEL 999 0.1', 'FMAP 2', 'PLAN 200 2.3',
+        self.generalRefinement = ['DEFS 0.02 0.1 0.01 0.04', 'CGLS 0 -1', 'SHEL 999 0.1', 'FMAP 2', 'PLAN 200 2.3',
                                   'LIST 6', 'WPDB 2 \n']
         self.generalRefinement2 = {'C': '$C_*', 'N': '$N_*', 'O': '$O_*', 'S': '$S_*', 'P': '$P_*'}
         self.generalRefinement2Order = ['C', 'N', 'O', 'S', 'P']
@@ -2276,6 +2299,23 @@ class AtomContainer(object):
     def getSpecifiedAtoms(self):
         return self.specifiedAtomList
 
+    def writeSpecifiedAtomFile(self):
+        """
+        All Information nescessary to identify the correct Residue in the file is written to a text file.
+        :return:
+        """
+        specifiedAtoms = []
+        for atom in self.specifiedAtomList:
+            resiNumber = atom.getResiSeqNum()
+            chainID = atom.getChainID()
+            resiName = atom.getResidueName()
+            atomName = 'CA'
+            specifiedAtoms.append('{} {} {} {}'.format(atomName, resiName, chainID, resiNumber))
+
+        f = open("SpecifiedResidues.txt", 'w')
+        f.write('\n'.join(specifiedAtoms))
+        f.close()
+
     def findNonAANearSpecAtom(self, flag):
         """
         Takes the specifiedAtomList and searches for non aa atoms near this atom. Perhaps an additional flag
@@ -2323,7 +2363,7 @@ class AtomContainer(object):
             atomname = atom.getPDBAtomName()
             chainID = atom.getChainID()
             residueNumber = atom.getResiSeqNum()
-            omitAtomString = 'OMIT ' + str(atomname) + '_' + str(chainID) + ':' + str(residueNumber) + '\n'
+            omitAtomString = 'OMIT ' + str(atomname) + '_' + str(chainID) + ':' + str(residueNumber).strip() + '\n'
             # print omitAtomString
             self.omitList.append(omitAtomString)
 
@@ -3379,6 +3419,7 @@ def main():
     global options
     if not options:
         options = parser()
+        # print options
     Data()
 
 
