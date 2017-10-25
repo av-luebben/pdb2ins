@@ -33,10 +33,13 @@ def fetchPDB(pdbCode, options, force=False):
         pdbFile = ''.join(str(options['o']).split('.')[:-1]) + '.pdb'
     else:
         pdbFile = pdbCode + '_a.pdb'
+        if os.path.exists(pdbFile):
+            os.remove(pdbFile)
     #    pdbFile = pdbCode.lower() + '.pdb'
     remoteCode = string.upper(pdbCode)
     # if not os.path.exists(pdb_dir):
     #     os.mkdir(pdb_dir)
+
     if not os.path.exists(pdbFile) or force:  # new url: https://files.rcsb.org/download/4ZXB.pdb.gz
         try:
             filename = urllib.urlretrieve(
