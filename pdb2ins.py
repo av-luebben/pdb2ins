@@ -134,8 +134,8 @@ class Data(object):
                     break
                 if doHKL == 'N' or doHKL == 'n':
                     break
-            if options['b'] and not options['filename']:  # check if indentation correct!
-                self.askHKLfilename()
+        if options['b'] and not options['filename']:  # check if indentation correct!
+            self.askHKLfilename()
 
     def askHKLfilename(self):
         """
@@ -146,7 +146,7 @@ class Data(object):
         """
         while True:
                 self.hklfile = raw_input("\nEnter name of structure factor file to read (To download a PDB "
-                                          "file enter \'@<PDBCODE>\'): ")#.upper()
+                                         "file enter \'@<PDBCODE>\'): ")  # .upper()
                 if not os.path.isfile(self.hklfile) and not self.hklfile.startswith('@'):
                     newstring = str(self.hklfile[:-4].upper())+str(self.hklfile[-4:])
                     if not os.path.isfile(newstring) and not os.path.isfile(self.hklfile.lower()):
@@ -370,17 +370,20 @@ class Data(object):
                'HFIX instructions for natural amino acids.')
                # 'It should be noted that is not recommended to use the HFIX instructions after disorder has been
                # modeled')
-        if not options['i']:
-            reply = raw_input('Delete all Hydrogen atoms in .ins file? (y or n) [Y]: ')
-            if reply == 'N' or reply == 'n':
-                self.atomContainer.keepHAtoms = True
-            elif reply == 'Y' or reply == 'y' or not reply:
-                self.atomContainer.keepHAtoms = False
+        if not options['e']:
+            if not options['i']:
+                reply = raw_input('Delete all Hydrogen atoms in .ins file? (y or n) [Y]: ')
+                if reply == 'N' or reply == 'n':
+                    self.atomContainer.keepHAtoms = True
+                elif reply == 'Y' or reply == 'y' or not reply:
+                    self.atomContainer.keepHAtoms = False
+                else:
+                    self.atomContainer.keepHAtoms = False
             else:
+                print 'INFO: Hydrogen atoms will not be transferred to .ins file.'
                 self.atomContainer.keepHAtoms = False
-        else:
-            print 'INFO: Hydrogen atoms will not be transferred to .ins file.'
-            self.atomContainer.keepHAtoms = False
+        else:  # This part should run if options 'e' is True.
+            self.atomContainer.keepHAtoms = True
 
     def isCrystData(self, line):
         """
@@ -547,7 +550,7 @@ class IO(object):
         # if not self.options['GUI']:
         if not self.options['i'] and not self.options['r']:
             while True:
-                pdbRedo = raw_input('\nDownload PDB file from RCSB Protein Data Base (1) or PDB_REDO databank '
+                pdbRedo = raw_input('\nDownload PDB file from RCSB Protein Data Base (1) or PDB_REDO database '
                                     '(2)? [1]: ')
                 if not pdbRedo or pdbRedo == '1':
                     self.usePDBredo = False
@@ -590,10 +593,10 @@ class IO(object):
                         self.workfile = newstring
                     if os.path.isfile(self.workfile.lower()):
                         self.workfile = self.workfile.lower()
-                if self.workfile.startswith('@'):
-                    trystring = str(self.workfile[-4:]) + '_a.pdb'  # when the file was already loaded in the GUI
-                    if os.path.isfile(trystring):
-                        self.workfile = trystring
+                # if self.workfile.startswith('@'):
+                #     trystring = str(self.workfile[-4:]) + '_a.pdb'  # when the file was already loaded in the GUI
+                #     if os.path.isfile(trystring):
+                #         self.workfile = trystring
             except TypeError:
                 print 'type error'
                 self.workfile = None
@@ -625,8 +628,8 @@ class IO(object):
                     hklfilename = options['d']  # the filename of the sf file is taken and an input filename suggested
                     if hklfilename.startswith('@'):
                         possiblePdbFilename = hklfilename
-                    else:
-                        possiblePdbFilename = ''.join(str(hklfilename).split('.')[:-1]) + '.pdb'
+                    # else:
+                    #     possiblePdbFilename = ''.join(str(hklfilename).split('.')[:-1]) + '.pdb'
                     while True:
                         self.workfile = raw_input("\nEnter name of PDB file to read (To download a PDB "
                                                   "file enter \'@<PDBCODE>\')[{}]: ".format(possiblePdbFilename))  #.upper()

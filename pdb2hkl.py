@@ -171,6 +171,8 @@ class IO(object):
             pdbFile = ''.join(str(options['o']).split('.')[:-1]) + '-sf.cif'
         else:
             pdbFile = pdbCode.lower() + '-sf.cif'
+        if os.path.exists(pdbFile):
+            os.remove(pdbFile)
         remoteCode = string.upper(pdbCode)
         # if not os.path.exists(pdb_dir):
         #     os.mkdir(pdb_dir)
