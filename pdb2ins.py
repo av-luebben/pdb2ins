@@ -299,28 +299,28 @@ class Data(object):
         """
         useAnisou = True
         alreadyasked = False
-        # try:
-        for line in self.IO.dataf:
-            if line[0] == "#":
-                continue
-            if line[:6] == 'EXPDTA':
-                self.isCrystData(line)
-            if line[:6] == "ATOM  " or line[:6] == "HETATM":
-                self.atomContainer.extractAtom(line)
-            if line[:6] == "HET   ":
-                self.atomContainer.extractHetRecord(line)
-            if line[:6] == "ANISOU" and useAnisou:
-                if not alreadyasked:
-                    useAnisou = self.askAnisou()
-                    alreadyasked = True
-                if useAnisou:
-                    self.atomContainer.extractAtomAnisou(line)
-            else:
-                self.header.interpretLine(line)
-        # except TypeError:
-        #     print line
-        #     print '\nERROR: File is not a PDB file.\n *** PDB2INS is terminated without writing an .ins file. ***'
-        #     exit()
+        try:
+            for line in self.IO.dataf:
+                if line[0] == "#":
+                    continue
+                if line[:6] == 'EXPDTA':
+                    self.isCrystData(line)
+                if line[:6] == "ATOM  " or line[:6] == "HETATM":
+                    self.atomContainer.extractAtom(line)
+                if line[:6] == "HET   ":
+                    self.atomContainer.extractHetRecord(line)
+                if line[:6] == "ANISOU" and useAnisou:
+                    if not alreadyasked:
+                        useAnisou = self.askAnisou()
+                        alreadyasked = True
+                    if useAnisou:
+                        self.atomContainer.extractAtomAnisou(line)
+                else:
+                    self.header.interpretLine(line)
+        except TypeError:
+            # print line
+            print '\nERROR: File is not a PDB file.\n *** PDB2INS is terminated without writing an .ins file. ***'
+            exit()
 
     def printWarnings(self):
         """
@@ -576,65 +576,36 @@ class IO(object):
         :return: self.workfile
         """
         self.workfile = self.options['filename']
-        if self.workfile:  # when cmd parser is used, the filename should already be specified, skipping user input
-            try:
-                if not os.path.isfile(self.workfile) and '@' not in self.workfile:
-                    newstring = str(self.workfile[:-4].upper())+str(self.workfile[-4:])
-                    if not os.path.isfile(newstring) and not os.path.isfile(self.workfile.lower()):
-                        print 'INFO: File {} not found.'.format(self.workfile)
-                        if not self.workfile.endswith('.pdb'):
-                            self.workfile += '.pdb'
-                            if os.path.isfile(self.workfile):
-                                print 'INFO: Using file \'{}\' instead.'.format(self.workfile)
-                            else:
-                                print ' *** Error: Given file name not valid. *** '
-                                self.workfile = None
-                    if os.path.isfile(newstring):
-                        self.workfile = newstring
-                    if os.path.isfile(self.workfile.lower()):
-                        self.workfile = self.workfile.lower()
-                # if self.workfile.startswith('@'):
-                #     trystring = str(self.workfile[-4:]) + '_a.pdb'  # when the file was already loaded in the GUI
-                #     if os.path.isfile(trystring):
-                #         self.workfile = trystring
-            except TypeError:
-                print 'type error'
-                self.workfile = None
-        if not self.workfile:  # in interactive mode without cmd options, the user is asked for the filename
-            if not self.options['d'] and not self.options['i']:
-                while True:
-                    self.workfile = raw_input("\nEnter name of PDB file to read (To download a PDB "
-                                              "file enter \'@<PDBCODE>\'): ")  # .upper()
-                    if not os.path.isfile(self.workfile) and not self.workfile.startswith('@'):
+        while True:
+            if self.workfile:  # when cmd parser is used, the filename should already be specified, skipping user input
+                try:
+                    if not os.path.isfile(self.workfile) and '@' not in self.workfile:
                         newstring = str(self.workfile[:-4].upper())+str(self.workfile[-4:])
                         if not os.path.isfile(newstring) and not os.path.isfile(self.workfile.lower()):
-                            # print self.workfile.upper(), newstring, self.workfile.lower()
-                            print 'INFO: File \'{}\' not found.'.format(self.workfile)
+                            print 'INFO: File {} not found.'.format(self.workfile)
+                            if not self.workfile.endswith('.pdb'):
+                                self.workfile += '.pdb'
+                                if os.path.isfile(self.workfile):
+                                    print 'INFO: Using file \'{}\' instead.'.format(self.workfile)
+                                else:
+                                    print ' *** Error: Given file name not valid. *** '
+                                    self.workfile = None
                         if os.path.isfile(newstring):
                             self.workfile = newstring
-                            break
                         if os.path.isfile(self.workfile.lower()):
                             self.workfile = self.workfile.lower()
-                            break
-                        if not self.workfile.endswith('.pdb'):
-                            self.workfile += '.pdb'
-                            if os.path.isfile(self.workfile):
-                                print 'INFO: Using file \'{}\' instead.'.format(self.workfile)
-                                break
-                    else:
-                        break
-            else:  # here the possibility is handled, that the user is in interactive mode and created a .hkl already
-                if self.options['d']:
-                    hklfilename = options['d']  # the filename of the sf file is taken and an input filename suggested
-                    if hklfilename.startswith('@'):
-                        possiblePdbFilename = hklfilename
-                    # else:
-                    #     possiblePdbFilename = ''.join(str(hklfilename).split('.')[:-1]) + '.pdb'
+                    # if self.workfile.startswith('@'):
+                    #     trystring = str(self.workfile[-4:]) + '_a.pdb'  # when the file was already loaded in the GUI
+                    #     if os.path.isfile(trystring):
+                    #         self.workfile = trystring
+                except TypeError:
+                    print 'type error'
+                    self.workfile = None
+            if not self.workfile:  # in interactive mode without cmd options, the user is asked for the filename
+                if not self.options['d'] and not self.options['i']:
                     while True:
                         self.workfile = raw_input("\nEnter name of PDB file to read (To download a PDB "
-                                                  "file enter \'@<PDBCODE>\')[{}]: ".format(possiblePdbFilename))  #.upper()
-                        if not self.workfile:
-                            self.workfile = possiblePdbFilename
+                                                  "file enter \'@<PDBCODE>\'): ")  # .upper()
                         if not os.path.isfile(self.workfile) and not self.workfile.startswith('@'):
                             newstring = str(self.workfile[:-4].upper())+str(self.workfile[-4:])
                             if not os.path.isfile(newstring) and not os.path.isfile(self.workfile.lower()):
@@ -653,30 +624,62 @@ class IO(object):
                                     break
                         else:
                             break
-        else:
-            self.workfile = self.workfile
-
-        if self.workfile.startswith('@'):  # if the user was asked for a filename, it is transferred to options
-            if not self.options['filename']:
-                self.options['filename'] = self.workfile  # now a correct output filename can be created
-            if self.options['r']:
-                self.usePDBredo = True
+                else:  # here the possibility is handled, that the user is in interactive mode and created a .hkl already
+                    if self.options['d']:
+                        hklfilename = options['d']  # the filename of the sf file is taken and an input filename suggested
+                        if hklfilename.startswith('@'):
+                            possiblePdbFilename = hklfilename
+                        # else:
+                        #     possiblePdbFilename = ''.join(str(hklfilename).split('.')[:-1]) + '.pdb'
+                        while True:
+                            self.workfile = raw_input("\nEnter name of PDB file to read (To download a PDB "
+                                                      "file enter \'@<PDBCODE>\')[{}]: ".format(possiblePdbFilename))  #.upper()
+                            if not self.workfile:
+                                self.workfile = possiblePdbFilename
+                            if not os.path.isfile(self.workfile) and not self.workfile.startswith('@'):
+                                newstring = str(self.workfile[:-4].upper())+str(self.workfile[-4:])
+                                if not os.path.isfile(newstring) and not os.path.isfile(self.workfile.lower()):
+                                    # print self.workfile.upper(), newstring, self.workfile.lower()
+                                    print 'INFO: File \'{}\' not found.'.format(self.workfile)
+                                if os.path.isfile(newstring):
+                                    self.workfile = newstring
+                                    break
+                                if os.path.isfile(self.workfile.lower()):
+                                    self.workfile = self.workfile.lower()
+                                    break
+                                if not self.workfile.endswith('.pdb'):
+                                    self.workfile += '.pdb'
+                                    if os.path.isfile(self.workfile):
+                                        print 'INFO: Using file \'{}\' instead.'.format(self.workfile)
+                                        break
+                            else:
+                                break
             else:
-                # if not self.options['i']:
-                self.askPDBredo()
-            if self.usePDBredo:
-                self.options['r'] = True
-        if self.workfile.startswith('@') and self.options['r']:
-            from getPDBFiles import fetchPDBredo
-            self.workfile = fetchPDBredo(self.workfile[1:], self.options)
-        elif self.workfile.startswith('@'):  # here elif when the if statement before is used!
-            from getPDBFiles import fetchPDB
-            # print self.workfile[1:]
-            self.workfile = fetchPDB(self.workfile[1:], self.options)
-            # print "INFO: Fetching PDB file for entry {}.".format(self.workfile)
-        else:
-            pass
-            # self.workfile = '3LOH.pdb'  # nur zu Testzwecken
+                self.workfile = self.workfile
+
+            if self.workfile.startswith('@'):  # if the user was asked for a filename, it is transferred to options
+                if not self.options['filename']:
+                    self.options['filename'] = self.workfile  # now a correct output filename can be created
+                if self.options['r']:
+                    self.usePDBredo = True
+                else:
+                    # if not self.options['i']:
+                    self.askPDBredo()
+                if self.usePDBredo:
+                    self.options['r'] = True
+            if self.workfile.startswith('@') and self.options['r']:
+                from getPDBFiles import fetchPDBredo
+                self.workfile = fetchPDBredo(self.workfile[1:], self.options)
+            elif self.workfile.startswith('@'):  # here elif when the if statement before is used!
+                from getPDBFiles import fetchPDB
+                # print self.workfile[1:]
+                self.workfile = fetchPDB(self.workfile[1:], self.options)
+                # print "INFO: Fetching PDB file for entry {}.".format(self.workfile)
+                if self.workfile:
+                    break
+            else:
+                pass
+                # self.workfile = '3LOH.pdb'  # nur zu Testzwecken
 
     def read(self):
         """

@@ -66,6 +66,8 @@ def fetchPDB(pdbCode, options, force=False):
                     # print 'exception raised'
                     try:
                         os.remove(pdbFile)
+                        print('ERROR: The PDB code you entered is not valid: {}'.format(pdbCode))
+                        return None
                     except OSError:
                         print ' *** ERROR: Filename or pdb code not valid. *** '
                         exit()
