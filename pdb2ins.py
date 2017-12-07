@@ -973,12 +973,13 @@ class Header(object):
         the main whether the space group is starting with an 'R" even if it is rhombohedral obverse on hexagonal axes
         remains in the program.
         """
-        doNotReplace1 = ['P 1', 'A 1', 'B 1', 'C 1', 'I 1', 'F 1', 'P 31 2 1']
+        doNotReplace1 = ['P 1', 'A 1', 'B 1', 'C 1', 'I 1', 'F 1', 'P 3 1 2', 'P 3 2 1', 'P 31 1 2', 'P 31 2 1',
+                         'P 32 1 2', 'P 32 2 1']
         if not options['s']:
             try:
                 self.spaceGroup = self.crystLine[55:66].strip('\n')
-                # if self.spaceGroup.strip() not in doNotReplace1:  is there a space group where the 1 must be removed?
-                #     self.spaceGroup = self.spaceGroup.replace(' 1 ', '').replace(' 1', '').lstrip()
+                if self.spaceGroup.strip() not in doNotReplace1:
+                    self.spaceGroup = self.spaceGroup.replace(' 1', '').lstrip()
                 if self.spaceGroup[1] == "R":
                     x = self.cell[6] - self.cell[5]
                     if x >= 20:
@@ -1005,7 +1006,8 @@ class Header(object):
         the while loop.
         :return:
         """
-        doNotReplace1 = ['P 1', 'A 1', 'B 1', 'C 1', 'I 1', 'F 1']
+        doNotReplace1 = ['P 1', 'A 1', 'B 1', 'C 1', 'I 1', 'F 1', 'P 3 1 2', 'P 3 2 1', 'P 31 1 2', 'P 31 2 1',
+                         'P 32 1 2', 'P 32 2 1']
         while True:
             answer = raw_input("\nSpace group not found or incorrect in .pdb file. Space group given: {} \n"
                                         "Please enter the correct space group:".format(self.getSpaceGroup()))
@@ -1014,8 +1016,8 @@ class Header(object):
             if answer.strip() == '':
                 self.spaceGroup = self.getSpaceGroup()
             else:
-                # if answer.strip() not in doNotReplace1:
-                #     self.spaceGroup = answer.replace(' 1 ', '').lstrip()
+                if answer.strip() not in doNotReplace1:
+                    self.spaceGroup = answer.replace(' 1', '').lstrip()
                 if answer[1] == "R":
                     x = self.cell[6] - self.cell[5]
                     if x >= 20:
