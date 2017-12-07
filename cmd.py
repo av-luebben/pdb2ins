@@ -31,6 +31,7 @@ class CommandlineParser(object):
             'a' use anisotropic displacement data if available.
             'b' create a .hkl file from a PDB structure factor file (.cif) or pdb code.
             'd' followed by a filename to specify structure factor file in cif format.
+            'e' all hydrogen atoms are transferred from the PDB file to the INS file.
             'o' followed by a filename to specify the output filename.
             'r' if a pdb code is given with '@', this option fetches the PDB file from REDO server.
             'z' followed by a number specifying the z value (number of molecules per cell).
@@ -48,6 +49,7 @@ class CommandlineParser(object):
                         'a': False,
                         'z': None,  # z-value, number of units per cell
                         'b': False,  # create hkl file
+                        'e': False,
                         'd': None,  # give structure factor file name, if not pdb code given as filename
                         'o': None,
                         'GUI': False}
@@ -61,6 +63,7 @@ class CommandlineParser(object):
                           'o': self._validate_dummy,
                           'z': self._validate_dummy,
                           'b': self._validate_dummy,
+                          'e': self._validate_dummy,
                           'd': self._validate_d,
                           'r': self._validate_dummy,
                           'GUI': self._validate_dummy}
@@ -200,6 +203,11 @@ class CommandlineParser(object):
             return False
 
     def _validate_dummy(self, arg):
+        """
+        Changes boolean from False to True for the option in questions.
+        :param arg:
+        :return:
+        """
         return True
 
 

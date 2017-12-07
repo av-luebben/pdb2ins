@@ -98,61 +98,68 @@ class IO(object):
         :return:
         """
         self.filename = options['filename']
-        if str(self.filename).endswith('.pdb'):
-            sfFileNameTry = ''.join(str(self.filename).split('.')[:-1]) + '-sf.cif'
-            if not os.path.isfile(sfFileNameTry):
-                self.filename = None
-            else:
-                self.filename = sfFileNameTry
-                print 'INFO: Using file {}'.format(sfFileNameTry)
-        try:
-            if not os.path.isfile(self.filename) and '@' not in self.filename:
-                newstring = str(self.filename[:4].upper())+(self.filename[-4:])
-                if not os.path.isfile(newstring) and not os.path.isfile(self.filename.lower()):
-                    print 'INFO: Given filename not valid.'
+        while True:
+            if str(self.filename).endswith('.pdb'):
+                sfFileNameTry = ''.join(str(self.filename).split('.')[:-1]) + '-sf.cif'
+                if not os.path.isfile(sfFileNameTry):
                     self.filename = None
-                if os.path.isfile(newstring):
-                    self.filename = newstring
-                try:
-                    os.path.isfile(self.filename.lower())
-                    self.filename = self.filename.lower()
-                except:
-                    print 'ERROR in pdb2hkl with: ', self.filename
-                    pass
-                    # print self.filename
-                # if os.path.isfile(self.filename.lower()):
-                #     self.filename = self.filename.lower()
-        except TypeError:
-            self.filename = None
-        if not self.filename:
-            # the next to lines are only there for Automated call of pdb2ins with a filename, otherwise not used.
-            # print '** ERROR Filename not correct. **'
-            # exit()
-            while True:
-                self.filename = raw_input("\nEnter name of a structure factor pdb file to read. "
-                                          "To download a structure factor pdb file enter \'@<PDBCODE>\': ")
-                if not os.path.isfile(self.filename) and not '@' in self.filename:
+                else:
+                    self.filename = sfFileNameTry
+                    print 'INFO: Using file {}'.format(sfFileNameTry)
+            try:
+                if not os.path.isfile(self.filename) and '@' not in self.filename:
                     newstring = str(self.filename[:4].upper())+(self.filename[-4:])
                     if not os.path.isfile(newstring) and not os.path.isfile(self.filename.lower()):
-                        print 'INFO: File \'{}\' not found.'.format(self.filename)
+                        print 'INFO: Given filename not valid.'
+                        self.filename = None
                     if os.path.isfile(newstring):
                         self.filename = newstring
-                        break
-                    if os.path.isfile(self.filename.lower()):
+                    try:
+                        os.path.isfile(self.filename.lower())
                         self.filename = self.filename.lower()
-                        break
-                else:
+                    except:
+                        print 'ERROR in pdb2hkl with: ', self.filename
+                        pass
+                        # print self.filename
+                    # if os.path.isfile(self.filename.lower()):
+                    #     self.filename = self.filename.lower()
+            except TypeError:
+                self.filename = None
+            if not self.filename:
+                # the next to lines are only there for Automated call of pdb2ins with a filename, otherwise not used.
+                # print '** ERROR Filename not correct. **'
+                # exit()
+                while True:
+                    self.filename = raw_input("\nEnter name of a structure factor pdb file to read. "
+                                              "To download a structure factor pdb file enter \'@<PDBCODE>\': ")
+                    if not os.path.isfile(self.filename) and not '@' in self.filename:
+                        newstring = str(self.filename[:4].upper())+(self.filename[-4:])
+                        if not os.path.isfile(newstring) and not os.path.isfile(self.filename.lower()):
+                            print 'INFO: File \'{}\' not found.'.format(self.filename)
+                        if os.path.isfile(newstring):
+                            self.filename = newstring
+                            break
+                        if os.path.isfile(self.filename.lower()):
+                            self.filename = self.filename.lower()
+                            break
+                    if not options['filename']:
+                        options['filename'] = self.filename
                     break
-        else:
-            self.filename = self.filename
-        if self.filename.startswith('@'):
-            if not len(self.filename[1:]) == 4:
-                print 'ERROR: Given PDB code not valid.'
-                exit(2)
             else:
-                self.filename = self.fetchPDB(self.filename[1:])
-        else:
-            pass
+                self.filename = self.filename
+            if self.filename.startswith('@'):
+                if not len(self.filename[1:]) == 4:
+                    print 'ERROR: Given PDB code not valid.'
+                    exit(2)
+                else:
+                    self.filename = self.fetchPDB(self.filename[1:])
+                    if self.filename:
+                        break
+                    else:
+                        options['filename'] = None
+                        options['o'] = None
+            else:
+                pass
 
     def fetchPDB(self, pdbCode, force=False):
         """
@@ -171,6 +178,8 @@ class IO(object):
             pdbFile = ''.join(str(options['o']).split('.')[:-1]) + '-sf.cif'
         else:
             pdbFile = pdbCode.lower() + '-sf.cif'
+        if os.path.exists(pdbFile):
+            os.remove(pdbFile)
         remoteCode = string.upper(pdbCode)
         # if not os.path.exists(pdb_dir):
         #     os.mkdir(pdb_dir)
@@ -190,8 +199,9 @@ class IO(object):
                         open(pdbFile, 'w').write(gzip.open(filename).read())
                         print "INFO: Fetched structure factor file for PDB code {} and saved as {}.".format(pdbCode, pdbFile)
                     except IOError:
-                        print 'IO ERROR. No file found. \nNo structure factor file available for this PDB code.'
+                        print 'ERROR: No file found. \nNo structure factor file available for this PDB code.'
                         os.remove(pdbFile)
+                        return None
                 else:
                     print "WARNING: {} not valid.\n".format(pdbCode)
                 # pdbFile.close()
