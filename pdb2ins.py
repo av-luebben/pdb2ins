@@ -1014,8 +1014,8 @@ class Header(object):
             if answer.strip() == '':
                 self.spaceGroup = self.getSpaceGroup()
             else:
-                if answer.strip() not in doNotReplace1:
-                    self.spaceGroup = answer.replace(' 1 ', '').lstrip()
+                # if answer.strip() not in doNotReplace1:
+                #     self.spaceGroup = answer.replace(' 1 ', '').lstrip()
                 if answer[1] == "R":
                     x = self.cell[6] - self.cell[5]
                     if x >= 20:
