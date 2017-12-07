@@ -687,8 +687,10 @@ class IO(object):
         :return: output filename
         """
         # defaultName = os.path.splitext(self.workfile)[0] + '.ins'
-        if '_' in self.workfile and self.options['filename'].startswith('@'):
+        if '_' in self.workfile:
             defaultName = os.path.splitext(self.workfile)[0].split('_')[0] + '.ins'
+        elif self.options['filename'].startswith('@'):
+            defaultName = self.workfile.split('@')[1] + '.ins'
         else:
             defaultName = os.path.splitext(self.workfile)[0] + '.ins'
         if not self.options['i']:
@@ -957,12 +959,12 @@ class Header(object):
         the main whether the space group is starting with an 'R" even if it is rhombohedral obverse on hexagonal axes
         remains in the program.
         """
-        doNotReplace1 = ['P 1', 'A 1', 'B 1', 'C 1', 'I 1', 'F 1']
+        doNotReplace1 = ['P 1', 'A 1', 'B 1', 'C 1', 'I 1', 'F 1', 'P 31 2 1']
         if not options['s']:
             try:
                 self.spaceGroup = self.crystLine[55:66].strip('\n')
-                if self.spaceGroup.strip() not in doNotReplace1:
-                    self.spaceGroup = self.spaceGroup.replace(' 1 ', '').replace(' 1', '').lstrip()
+                # if self.spaceGroup.strip() not in doNotReplace1:  is there a space group where the 1 must be removed?
+                #     self.spaceGroup = self.spaceGroup.replace(' 1 ', '').replace(' 1', '').lstrip()
                 if self.spaceGroup[1] == "R":
                     x = self.cell[6] - self.cell[5]
                     if x >= 20:
