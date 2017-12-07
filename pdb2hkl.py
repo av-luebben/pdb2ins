@@ -242,7 +242,10 @@ class IO(object):
             if not self.outputFilename:
                 self.outputFilename = defaultName
             elif not self.outputFilename.endswith('.hkl'):
+                # if '-' in self.outputFilename:
+                #     self.outputFilename = self.outputFilename.split('-')[0]
                 self.outputFilename += '.hkl'
+        # print self.outputFilename
 
     def writeFile(self, data):
         """

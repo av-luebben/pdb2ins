@@ -230,7 +230,10 @@ class Data(object):
                 #     outfile = str(insfilename[1:]) + '.hkl'
                 # print '4', outfile
             if not outfile:  # if not str(filename).startswith('@'):
-                outfile = ''.join(str(filename).split('.')[:-1]) + '.hkl'  # "".join(f.split('.')[:-1]) + '.ins'
+                if '-sf' in filename:
+                    outfile = ''.join(str(filename).split('-')[:-1]) + '.hkl'
+                else:
+                    outfile = ''.join(str(filename).split('.')[:-1]) + '.hkl'  # "".join(f.split('.')[:-1]) + '.ins'
             # print '5', outfile
             if options['i']:
                 i = True
@@ -2260,20 +2263,7 @@ class AtomContainer(object):
         this name and perhaps an additional flag (none right now) and list
         them/return them. Atom object is writen to specifiedAtomList
         :param type:
-        :param flag:(self.getSpecifiedAtoms()):
-            # altLoc1 = atom1.getAltLoc()
-            for j in xrange(len(secondList)-i-1):
-                j += i+1
-                atom2 = secondList[j]
-                # altLoc2 = atom2.getAltLoc()
-                # print atom1.getAtomCoord(), atom2.getAtomCoord()
-                if self.getAtomDistance(atom1.getAtomCoord(), atom2.getAtomCoord()) < 5:
-                    # self.ssBonds = True
-                    # chain1 = atom1.getChainID()
-                    # chain2 = atom2.getChainID()
-                    # num1 = atom1.getResiSeqNum()
-                    # num2 = atom2.getResiSeqNum()
-                    self.removeAt
+        :param flag:
         :return: list
         """
         # print 'in findSpecAtom'
@@ -2282,17 +2272,18 @@ class AtomContainer(object):
         specifiedAtom = spAtom
         # print residuetype, specifiedAtom
         for atom in self.atomDict.values():
+            altLoc = atom.getAltLoc()
             resiname = atom.getResidueName().upper()
             atomname = atom.getPDBAtomName()
             chainID = atom.getChainID()
             resiNumber = atom.getResiSeqNum()
-            # print resiname, atomname
+            # print 'ANALYSIS', resiname, atomname, chainID, resiNumber, altLoc
             # flag = atom.isComplete()[0]
             # if resiname == residuetype:
             #     print resiname, residuetype, atomname
             # if atomname == specifiedAtom:
             #     print atomname, specifiedAtom, residuetype
-            if resiname == residuetype and atomname == specifiedAtom:
+            if resiname == residuetype and atomname == specifiedAtom and not altLoc:
                 # print 'specified atom', resiname, atomname, chainID, resiNumber
                 self.specifiedAtomList.append(atom)
 
@@ -2309,7 +2300,7 @@ class AtomContainer(object):
             resiNumber = atom.getResiSeqNum()
             chainID = atom.getChainID()
             resiName = atom.getResidueName()
-            atomName = 'CA'
+            atomName = 'CG'
             specifiedAtoms.append('{} {} {} {}'.format(atomName, resiName, chainID, resiNumber))
 
         f = open("SpecifiedResidues.txt", 'w')
