@@ -704,7 +704,7 @@ class IO(object):
         if '_' in self.workfile:
             defaultName = os.path.splitext(self.workfile)[0].split('_')[0] + '.ins'
         elif self.options['filename'].startswith('@'):
-            defaultName = self.workfile.split('@')[1] + '.ins'
+            defaultName = self.options['filename'].split('@')[1] + '.ins'
         else:
             defaultName = os.path.splitext(self.workfile)[0] + '.ins'
         if not self.options['i']:

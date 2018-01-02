@@ -55,7 +55,13 @@ def SlaveCallback(*args):
     :param args: list of strings.
     :return: None
     """
+
     for arg in args:
+        # the following couple of lines are for debugging the code: Output from pdb2ins is directed to a file
+        # with open('output.txt', 'a') as fp:
+        #     fp.write(str(arg))
+
+        # Redirect pdb2ins output from print statements to GUI text field:
         arg = arg[0]
         if 'INFO:' in arg or 'ERROR:' in arg:
             t.insert(END, arg+'\n')
@@ -635,6 +641,8 @@ def setOutputFilename():
     f = fileName.get()
     if f[-4:] == '_a.pdb':
         return f.replace('_a.pdb', '.ins')
+    if f[-4:] == '.pdb':
+        return f.replace('.pdb', '.ins')
     if f[0] == '@':
         new = f.replace('@', '') + '.ins'
         return new
