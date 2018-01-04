@@ -623,6 +623,8 @@ class IO(object):
                                     print 'INFO: Using file \'{}\' instead.'.format(self.workfile)
                                     break
                         else:
+                            if os.path.isfile(self.workfile):
+                                self.options['filename'] = self.workfile
                             break
                 else:  # here the possibility is handled, that the user is in interactive mode and created a .hkl already
                     if self.options['d']:
@@ -636,6 +638,9 @@ class IO(object):
                                                       "file enter \'@<PDBCODE>\')[{}]: ".format(possiblePdbFilename))  #.upper()
                             if not self.workfile:
                                 self.workfile = possiblePdbFilename
+                            # if os.path.isfile(self.workfile):
+                            #     print self.workfile, 'exists'
+                            #     self.options['filename'] = self.workfile
                             if not os.path.isfile(self.workfile) and not self.workfile.startswith('@'):
                                 newstring = str(self.workfile[:-4].upper())+str(self.workfile[-4:])
                                 if not os.path.isfile(newstring) and not os.path.isfile(self.workfile.lower()):
@@ -656,7 +661,6 @@ class IO(object):
                                 break
             else:
                 self.workfile = self.workfile
-
             if self.workfile.startswith('@'):  # if the user was asked for a filename, it is transferred to options
                 if not self.options['filename']:
                     self.options['filename'] = self.workfile  # now a correct output filename can be created
@@ -678,7 +682,10 @@ class IO(object):
                 if self.workfile:
                     break
             else:
-                pass
+                self.askPDBredo()
+                if self.usePDBredo:
+                    self.options['r'] = True
+                break
                 # self.workfile = '3LOH.pdb'  # nur zu Testzwecken
 
     def read(self):
