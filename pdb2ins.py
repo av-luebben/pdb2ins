@@ -185,6 +185,7 @@ class Data(object):
         The subroutine pdb2hkl is started.
         :return:
         """
+        options2 = []
         if options['b']:
             if options['d']:
                 filename = options['d']
@@ -220,9 +221,13 @@ class Data(object):
             try:
                 print 'INFO: Starting pdb2hkl.'
                 try:
-                    self.header.hklf = pdb2hkl.run(optionsForPdb2hkl)
+                    self.header.hklf, options2 = pdb2hkl.run(optionsForPdb2hkl)
                 except SystemExit:
                     pass
+                hklFileName = options2['filename']
+                filenamePDB = options['filename']
+                if hklFileName != filenamePDB:
+                    options['filename'] = hklFileName
                 # self.hklf = pdb2hkl.Data.getHKLF()
                 # print self.header.hklf
             except SystemError:

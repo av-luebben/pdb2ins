@@ -1144,7 +1144,7 @@ def run(forceOptions=None):
     hklf = Data().getHKLF()
     if forceOptions:
         print 'INFO: Closing pdb2hkl.'
-        return hklf
+        return hklf, options
 
 
 if __name__ == '__main__':
