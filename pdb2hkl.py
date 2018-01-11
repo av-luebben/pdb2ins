@@ -159,7 +159,7 @@ class IO(object):
                         options['filename'] = None
                         options['o'] = None
             else:
-                pass
+                break
 
     def fetchPDB(self, pdbCode, force=False):
         """
