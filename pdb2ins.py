@@ -2511,7 +2511,7 @@ class AtomContainer(object):
                 #                                                   atom.getResidueName()))
                 if atom.getChainID() in self.chainIDSet and not atom.getResidueName() == 'HOH':
                     try:
-                        makeHFIXfor = self.chains[atom.getChainID()][atom.getResiSeqNum()].getLastAtomInResi()
+                        makeHFIXfor = self.chains[atom.getChainID()][int(atom.getResiSeqNum())].getLastAtomInResi()
                     except NoResidueError:
                         pass
                 # else:
