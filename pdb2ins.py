@@ -687,9 +687,9 @@ class IO(object):
                 if self.workfile:
                     break
             else:
-                self.askPDBredo()
-                if self.usePDBredo:
-                    self.options['r'] = True
+                # self.askPDBredo()
+                # if self.usePDBredo:
+                #     self.options['r'] = True
                 break
                 # self.workfile = '3LOH.pdb'  # nur zu Testzwecken
 
