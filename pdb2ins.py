@@ -1332,7 +1332,7 @@ class Header(object):
         :param elementList: AtomContainer generated List of elements of interest for this instruction (elementList2)
         :return: string
         """
-        return 'RIGU  !Apply enhanced rigid body restraints\n'
+        return 'RIGU  !Apply enhanced rigid bond restraints\n'
         # return 'RIGU {}\n'.format(' '.join([self.generalRefinement2[key] for key in self.generalRefinement2Order
         #                                     if key in elementlist]))
 
