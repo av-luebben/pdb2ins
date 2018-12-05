@@ -269,8 +269,8 @@ class Data(object):
         """
         self.atomContainer.makeRestraintsForTermini(self.header.getResiDict())
         if 'HOH' in self.atomContainer.getOtherResiSet():
-            waterInstructions = ['ISOR_HOH 0.1 $O  !water atoms are restraint to near isotropic behavior',
-                                 'CONN_HOH 0 O  !generation of connectivity table fine-tunning']
+            waterInstructions = ['ISOR_HOH 0.1 $O  !water atoms are restrained to near isotropic behavior',
+                                 'CONN_HOH 0 O  !generation of connectivity table fine-tuning']
             # waterInstructions = ['ISOR_HOH 0.1 $O', 'CONN_HOH 0 $O']
         else:
             waterInstructions = ["REM ISOR and CONN 0 recommended on adding water"]
@@ -1370,7 +1370,7 @@ class Header(object):
         :param elementList: AtomContainer generated List of elements of interest for this instruction (elementList2)
         :return: string
         """
-        return 'RIGU  !Apply enhanced rigid body restraints\n'
+        return 'RIGU  !Apply enhanced rigid bond restraints\n'
         # return 'RIGU {}\n'.format(' '.join([self.generalRefinement2[key] for key in self.generalRefinement2Order
         #                                     if key in elementlist]))
 
