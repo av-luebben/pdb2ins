@@ -1068,7 +1068,7 @@ class Data(object):
             # except TypeError:
             #     noFlack = True
             if noFlack:
-                self.dataString.append('{:>4}{:>4}{:>4}{:> 8n}{:> 8n} \n'.format(h, k, l, meas, meassigma))
+                self.dataString.append('{:>4}{:>4}{:>4}{: >8s}{:> 8n} \n'.format(h, k, l, meas, meassigma))
                 # if meas > 999999:
                 # elif int(meas) < 0:
                 #     self.dataString.append('{:>4} {:>3} {:>3} {:>-6.5n} {:>7.6n} \n'.format(h, k, l, meas, meassigma))
@@ -1078,7 +1078,7 @@ class Data(object):
             if not noFlack:
                 # if meas > 999999:
                 # print meas, type(meas), meassigma, type(meassigma)
-                self.dataString.append('{:>4}{:>4}{:>4}{:> 8n}{:> 8n}{:> 4} \n'.format(h, k, l, meas, meassigma,
+                self.dataString.append('{:>4}{:>4}{:>4}{: >8s}{:> 8n}{:> 4} \n'.format(h, k, l, meas, meassigma,
                                                                                            flag))
                 # elif int(meas) < 0:
                 #     self.dataString.append('{:>4} {:>3} {:>3} {:>-6.5n} {:>7.6n} {:>3} \n'.format(h, k, l, meas,
