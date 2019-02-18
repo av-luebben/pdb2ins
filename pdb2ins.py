@@ -1316,14 +1316,20 @@ class Header(object):
         generalRefinement3 is used to give the fixed instructions from BUMP to MORE.
         :return: 3 lists with general refinement instructions.
         """
-        self.generalRefinement = ['DEFS 0.02 0.1 0.01 0.04', 'CGLS 20 -1', 'SHEL 999 0.1', 'FMAP 2', 'PLAN 200 2.3',
-                                  'LIST 6', 'WPDB 2 \n']
+        self.generalRefinement = ['DEFS 0.02 0.1 0.01 0.04',
+                                  'CGLS 20 -1       ! 20 conjugate gradient cycles, calculate Rfree',
+                                  'SHEL 999 0.1     ! all other data used for refinement',
+                                  'FMAP 2           ! difference Fourier',
+                                  'PLAN 200 2.3     ! Peak search and identifications of potential waters',
+                                  'LIST 6   ! Output phased reflection file to generate maps etc.',
+                                  'WPDB 2   ! Write output PDB file\n']
         self.generalRefinement2 = {'C': '$C_*', 'N': '$N_*', 'O': '$O_*', 'S': '$S_*', 'P': '$P_*'}
         self.generalRefinement2Order = ['C', 'N', 'O', 'S', 'P']
-        self.generalRefinement3 = ['XNPD 0.001 \n', 'REM BUMP', 'SWAT \n',
-                                   'REM Remove MERG 4 instruction if Friedel opposites should not be merged.',
-                                   'MERG 4 \n',
-                                   'REM MORE 0 would reduce output if not required for diagnostic purposes. \n']
+        self.generalRefinement3 = ['XNPD 0.001 \n',
+                                   'REM BUMP        ! generate anti-bumping restraints automatically',
+                                   'SWAT            ! diffuse water model',
+                                   'MERG 4  ! remove MERG 4 instruction if Friedel opposites should not be merged',
+                                   'REM MORE 0 ! would reduce output if not required for diagnostic purposes. \n']
 
     def getRIGUInstructions(self, elementlist):
         """
@@ -2733,7 +2739,7 @@ class Atom(object):
         Calculates Uiso from the temperature factor in the pdb line.
         :return: float, uiso
         """
-        self.atomUIso = (self.atomTempFactor / (8 * np.pi * np.pi))
+
         return float(self.atomUIso)
 
     def getUanis(self, cell):
